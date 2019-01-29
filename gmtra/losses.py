@@ -17,16 +17,22 @@ from pathos.multiprocessing import Pool,cpu_count
 from SALib.sample import morris
 from tqdm import tqdm
 
-sys.path.append(os.path.join( '..'))
-from miriam_py.utils import load_config,square_m2_cost_range,monetary_risk,sum_tuples
+from utils import load_config,square_m2_cost_range,monetary_risk,sum_tuples
 
 pandas.set_option('chained_assignment',None)
 
 
 def asset_bridge_flood_cyclone(x,design_table,depth_threshs,param_values,events,all_rps):
     """
+    Function to estimate the range of either flood or cyclone damages to an individual bridge asset.
+    
     Arguments:
-        
+        *x* : row in geopandas GeoDataFrame that represents an individual asset.
+        *design_table* :
+        *depth_thresh* :
+        *param_values* : A NumPy Array with sets of parameter values we would like to test.
+        *events* :
+        *all_rps* :
     
     Returns:
         
@@ -62,9 +68,12 @@ def asset_bridge_flood_cyclone(x,design_table,depth_threshs,param_values,events,
 
 def asset_bridge_earthquake(x,eq_curve,param_values,vals_EQ,events,all_rps):
     """
-    Arguments:
-        
     
+    Arguments:
+        *x* : A row in a geopandas GeoDataFrame that represents an individual asset.
+        *events* :        
+        *param_values* : A NumPy Array with sets of parameter values we would like to test.
+   
     Returns:
         
     """        
@@ -86,9 +95,12 @@ def asset_bridge_earthquake(x,eq_curve,param_values,vals_EQ,events,all_rps):
 
 def asset_cyclone(x,events,param_values):
     """
-    Arguments:
-        
     
+    Arguments:
+        *x* : row in geopandas GeoDataFrame that represents an individual asset.
+        *events* : 
+        *param_values* : A NumPy Array with sets of parameter values we would like to test.
+            
     Returns:
         
     """    
@@ -112,6 +124,9 @@ def asset_cyclone(x,events,param_values):
 def asset_earthquake(x,global_costs,paved_ratios,frag_tables,events,wbreg_lookup,param_values,val_cols):
     """
     Arguments:
+        *x* : row in geopandas GeoDataFrame that represents an individual asset.
+        *events* : 
+        *param_values* : A NumPy Array with sets of parameter values we would like to test.
         
     
     Returns:
@@ -150,6 +165,9 @@ def asset_earthquake(x,global_costs,paved_ratios,frag_tables,events,wbreg_lookup
 def asset_flood(x,global_costs,paved_ratios,flood_curve_paved,flood_curve_unpaved,events,wbreg_lookup,param_values,val_cols):
     """
     Arguments:
+         *x* : row in geopandas GeoDataFrame that represents an individual asset.
+        *events* : 
+        *param_values* : A NumPy Array with sets of parameter values we would like to test.
         
     
     Returns:

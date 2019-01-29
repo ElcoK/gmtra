@@ -1,12 +1,9 @@
 import os
-import sys
 import geopandas as gpd
 import pandas as pd
-import numpy as np
 from pathos.multiprocessing import Pool,cpu_count
 
-sys.path.append(os.path.join( '..'))
-from miriam_py.utils import load_config,line_length
+from utils import load_config,line_length
 from functions import fetch_roads,map_roads,fetch_railway
 data_path = load_config()['paths']['data']
 

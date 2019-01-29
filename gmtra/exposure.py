@@ -12,8 +12,7 @@ import geopandas
 
 pandas.options.mode.chained_assignment = None
 
-sys.path.append(os.path.join( '..'))
-from miriam_py.utils import load_config,total_length_risk,exposed_length_risk
+from utils import load_config,total_length_risk,exposed_length_risk
 data_path = load_config()['paths']['data']
 
 from pathos.multiprocessing import Pool,cpu_count

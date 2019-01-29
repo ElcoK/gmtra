@@ -18,8 +18,7 @@ from itertools import product
 import shapely.wkt
 
 sys.path.append(os.path.join( '..'))
-from miriam_py.utils import load_config
-from utils import fetch_roads,map_roads,fetch_railway,get_raster_value,create_folder_lookup,line_length,load_osm_data_region
+from utils import load_config,create_folder_lookup
 
 from rasterio.features import shapes
 from shapely.geometry import MultiLineString
@@ -416,31 +415,6 @@ def get_tree_density(x,road =False):
     except:
         print('{} failed!'.format(x[3]))
 	
-
-def fetch_bridges(data_path,country,regional=True):
-    
-    data = load_osm_data_region(data_path,country)
-    
-    sql_lyr = data.ExecuteSQL("SELECT osm_id,bridge,highway,railway,lanes FROM lines WHERE bridge IS NOT NULL")
-    
-    roads=[]
-    for feature in sql_lyr:
-        if feature.GetField('bridge') is not None:
-            osm_id = feature.GetField('osm_id')
-            bridge = feature.GetField('bridge')
-            lanes = feature.GetField('lanes')
-            highway = feature.GetField('highway')
-            railway = feature.GetField('railway')
-            shapely_geo = shapely.wkt.loads(feature.geometry().ExportToWkt()) 
-            if shapely_geo is None:
-                continue
-            roads.append([osm_id,bridge,lanes,highway,railway,shapely_geo])
-    
-    if len(roads) > 0:
-        return gpd.GeoDataFrame(roads,columns=['osm_id','bridge','lanes','road_type','rail_type','geometry'],crs={'init': 'epsg:4326'})
-    else:
-        print('No bridges in {}'.format(country))
-
 
 def region_bridges(x,road=True):
     region = x[3]

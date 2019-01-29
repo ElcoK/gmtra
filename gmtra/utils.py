@@ -6,7 +6,7 @@ Created on Tue Nov 27 09:52:40 2018
 """
 
 import os
-import sys
+import json
 import rasterio as rio
 import numpy as np
 import geopandas as gpd
@@ -18,10 +18,13 @@ from collections import defaultdict
 import shutil
 from scipy import integrate
 
-sys.path.append(os.path.join( '..'))
-from miriam_py.utils import load_config
-
-sys.path.append(os.path.join( '..'))
+def load_config():
+    """Read config.json
+    """
+    config_path = os.path.join(os.path.dirname(__file__), '..', 'config.json')
+    with open(config_path, 'r') as config_fh:
+        config = json.load(config_fh)
+    return config
 
 def clean_fluvial_dirs(hazard_path):
     """

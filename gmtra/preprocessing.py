@@ -18,8 +18,7 @@ from pathos.multiprocessing import Pool,cpu_count
 from shapely.geometry import MultiPolygon
 from geopy.distance import vincenty
 
-sys.path.append(os.path.join( '..'))
-from miriam_py.utils import load_config,create_folder_lookup
+from utils import load_config,create_folder_lookup
 
 
 def remove_tiny_shapes(x,regionalized=False):
