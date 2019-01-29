@@ -16,7 +16,7 @@ import pandas as pd
 import country_converter as coco
 from collections import defaultdict
 import shutil
-from rasterstats import point_query
+from scipy import integrate
 
 sys.path.append(os.path.join( '..'))
 from miriam_py.utils import load_config
@@ -96,9 +96,55 @@ def gdf_clip(gdf,clip_geom):
     """
     return gdf.loc[gdf['geometry'].apply(lambda x: x.within(clip_geom))].reset_index(drop=True)
 
-def get_raster_value(centroid,out_image,out_transform):
-    return int(point_query(centroid,out_image,affine=out_transform,nodata=-9999,interpolate='nearest')[0] or 0)   
+def sum_tuples(l):
+    """
+    """
+    return tuple(sum(x) for x in zip(*l))
 
+def monetary_risk(RPS,loss_list):
+    """
+    """
+    collect_risks = []
+    for y in range(7):
+        collect_risks.append(integrate.simps([x[y] for x in loss_list][::-1], x=RPS[::-1]))
+    return collect_risks
+
+def exposed_length_risk(x,hzd,RPS):
+    """
+    
+    """
+    if hzd == 'EQ':
+        return integrate.simps([x.length_EQ_rp250,x.length_EQ_rp475,x.length_EQ_rp975,x.length_EQ_rp1500,x.length_EQ_rp2475][::-1], x=RPS[::-1])
+    elif hzd == 'Cyc':
+        return integrate.simps([x.length_Cyc_rp50,x.length_Cyc_rp100,x.length_Cyc_rp250,x.length_Cyc_rp500,x.length_Cyc_rp1000][::-1], x=RPS[::-1])
+    elif hzd == 'FU':
+        return integrate.simps([x['length_FU-5'],x['length_FU-10'],x['length_FU-20'],x['length_FU-50'],x['length_FU-75'],x['length_FU-100'],
+                                x['length_FU-200'],x['length_FU-250'],x['length_FU-500'],x['length_FU-1000']][::-1], x=RPS[::-1])
+    elif hzd == 'PU':
+        return integrate.simps([x['length_PU-5'],x['length_PU-10'],x['length_PU-20'],x['length_PU-50'],x['length_PU-75'],x['length_PU-100'],
+                                x['length_PU-200'],x['length_PU-250'],x['length_PU-500'],x['length_PU-1000']][::-1], x=RPS[::-1])
+    elif hzd == 'CF':
+        return integrate.simps([x['length_CF-10'],x['length_CF-20'],x['length_CF-50'],x['length_CF-100'],x['length_CF-200'],x['length_CF-500'],
+                                x['length_CF-1000']][::-1], x=RPS[::-1])
+
+def total_length_risk(x,hazard,RPS):
+    """
+    """
+    return integrate.simps([x.length]*len(RPS), x=RPS[::-1])
+
+def square_m2_cost_range(x):
+    """
+    """
+    short_bridge = [int(10.76*115),int(10.76*200)]
+    medium_bridge = [int(10.76*85),int(10.76*225)]
+    long_bridge = [int(10.76*85),int(10.76*225)]
+
+    if (x.length > 6) & (x.length <= 30):
+        return short_bridge
+    elif (x.length > 30) & (x.length <= 100):
+        return medium_bridge
+    elif x.length >= 100:
+        return long_bridge
 
 def extract_value_from_gdf(x,gdf_sindex,gdf,column_name):
     """
