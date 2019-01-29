@@ -1,0 +1,25 @@
+name: py36
+
+channels:
+        - konstantinstadler
+        - conda-forge
+
+dependencies:
+        - python=3.6
+        - gdal
+        - numpy
+        - pandas
+        - shapely
+        - geopandas
+        - pathos
+        - rasterio
+        - matplotlib
+        - SALib
+        - scikit-learn
+        - xlrd
+        - tqdm
+        - jupyter
+        - boltons
+        - feather-format
+        - natsort
+        - country_converter
