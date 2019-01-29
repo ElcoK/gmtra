@@ -1,0 +1,9 @@
+{
+    "comment": "Copy this file to `config.json` and edit for your local setup. `data` is the path to the directory of input data, as provided - e.g. `~/data// Incoming Data/`. `hazard_data` is the path to the directory of the hazard data, `figures` is the path to output figures.",
+    "paths": {
+        "data": "Y:\\",
+		"hazard_data" : "Y:\\Hazards",
+		"figures" : "Y:\\figures"
+		}
+}
+
