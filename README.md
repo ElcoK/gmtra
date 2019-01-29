@@ -37,4 +37,5 @@ activate GMTRA
 ### License
 Copyright (C) 2019 Elco Koks. All versions released under the [GNU Affero General Public License v3.0 license](LICENSE).
 
+
 ![ITRC](https://www.itrc.org.uk/wp-content/themes/itrc-mistral/images/ITRC-mistral.png)
