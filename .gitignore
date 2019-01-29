@@ -123,5 +123,3 @@ config.json
 gams_runs/
 .gdx
 
-# Figures
-figures/*
