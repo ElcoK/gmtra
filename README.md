@@ -8,8 +8,8 @@ It also provides Jupyter Notebooks to reproduce the figures in Koks et al. (2019
 
 ## Data requirements
 * All transport data is based on OpenStreetMap (OSM), which can be freely downloaded. The planet file used in Koks et al. (2019) is downloaded at July 17, 2018. However, to run the code, the latest planet.osm.pbf file can be used.
-* Global earthquake and cyclone hazard data is available from UNISDR Global Assessment Report 2015 data portal (https://risk.preventionweb.net). 
-* In Koks et al. (2019), global fluvial and surface flood hazard data (May 2017 version) is used with the permission of Fathom Global. 
+* Global earthquake and cyclone hazard data is available from the UNISDR Global Assessment Report 2015 data portal (https://risk.preventionweb.net). 
+* In Koks et al. (2019), global fluvial and surface SSBN flood hazard data (May 2017 version) is used with the permission of [Fathom Global](http://www.fathom.global/). 
 * The coastal flood maps are developed by the Joint Research Centre of the European Commission. 
 
 ## Prepare data paths
@@ -21,7 +21,7 @@ figures, for example:
 {
     "data_path": "/home/<user>/projects/GMTRA/data",
     "hazard_path": "/home/<user>/projects/GMTRA/hazard_data",
-    "figures_path": "/home/<user>/projects/GMTRA/figures"
+    "figure_path": "/home/<user>/projects/GMTRA/figures"
 }
 ```
 
