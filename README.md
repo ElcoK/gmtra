@@ -4,12 +4,12 @@
 
 This repository provides the code to perform a global transport asset risk analysis for earthquakes, floods and cyclones. 
 
-It also provides Jupyter Notebooks to reproduce the figures in Koks et al. (2019). 
+It also provides Jupyter Notebooks to reproduce the figures in Koks et al. (in review). 
 
 ## Data requirements
-* All transport data is based on OpenStreetMap (OSM), which can be freely downloaded. The planet file used in Koks et al. (2019) is downloaded at July 17, 2018. However, to run the code, the latest planet.osm.pbf file can be used.
+* All transport data is based on OpenStreetMap (OSM), which can be freely downloaded. The planet file used in Koks et al. (in review) is downloaded at July 17, 2018. However, to run the code, the latest planet.osm.pbf file can be used.
 * Global earthquake and cyclone hazard data is available from the UNISDR Global Assessment Report 2015 data portal (https://risk.preventionweb.net). 
-* In Koks et al. (2019), global fluvial and surface SSBN flood hazard data (May 2017 version) is used with the permission of [Fathom Global](http://www.fathom.global/). 
+* In Koks et al. (in review), global fluvial and surface SSBN flood hazard data (May 2017 version) is used with the permission of [Fathom Global](http://www.fathom.global/). 
 * The coastal flood maps are developed by the Joint Research Centre of the European Commission. 
 
 ## Prepare data paths
