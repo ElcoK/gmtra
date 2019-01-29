@@ -14,6 +14,7 @@ figures, for example:
 ```json
 {
     "data_path": "/home/<user>/projects/GMTRA/data",
+    "hazard_path": "/home/<user>/projects/GMTRA/hazard_data"
     "figures_path": "/home/<user>/projects/GMTRA/figures"
 }
 ```
