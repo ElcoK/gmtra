@@ -25,7 +25,7 @@ sys.path.append(os.path.join( '..'))
 
 def clean_fluvial_dirs(hazard_path):
     """
-    Remove all the data we  do not use.
+    Remove all the data we do not use.
     """
     for root, dirs, files in os.walk(os.path.join(hazard_path,'InlandFlooding'), topdown=False):
         for name in dirs:
@@ -86,10 +86,13 @@ def EQ_hazard(hazard_path,country_full,country_ISO2,flood_type,flood_type_abb,rp
 
 def gdf_clip(gdf,clip_geom):
     """
-    Inputs are:
-        shape_in -- path string to shapefile to be clipped
-    Outputs are:
-        province_geom -- shapely geometry of province for what we do the calculation
+    Arguments:
+        *gdf* : geopandas GeoDataFrame that we want to clip
+        
+         *clip_geom* : shapely geometry of region for what we do the calculation
+               
+    Returns:
+        *gdf* : clipped geopandas GeoDataframe
     """
     return gdf.loc[gdf['geometry'].apply(lambda x: x.within(clip_geom))].reset_index(drop=True)
 
@@ -99,28 +102,19 @@ def get_raster_value(centroid,out_image,out_transform):
 
 def extract_value_from_gdf(x,gdf_sindex,gdf,column_name):
     """
-   Inputs are:
-        x -- row of dataframe
-        gdf_sindex -- spatial index of dataframe of which we want to extract the value
-        gdf -- GeoDataFrame of which we want to extract the value
-        column_name -- column that contains the value we want to extract
+    Arguments:
+        x : row of dataframe
+        gdf_sindex : spatial index of dataframe of which we want to extract the value
+        gdf : GeoDataFrame of which we want to extract the value
+        column_name : column that contains the value we want to extract
         
-    Outputs are:
+    Returns:
         extracted value from other gdf
     """
     try:
         return gdf.loc[list(gdf_sindex.intersection(x.bounds))][column_name].values[0]
     except:
         return 0
-
-def bin_col(col_to_bin):
-    cats = ['0', '1', '2', '3']
-    bins = [0,0.25,0.5,1,50]
-    out = pd.get_dummies(pd.cut(col_to_bin, bins, labels=cats))
-    for cat in cats:
-        out[cat] = out[cat]*int(cat)    
-
-    return out.max(axis=1)
 
 def default_factory():
     return 'nodata'
@@ -189,94 +183,87 @@ def create_folder_lookup():
     return dict(zip(ISO3_lookup,glob_name_folder))
 
 def map_railway():
-
     """ 
-    To create a new column with an aggregated list of road types. 
-    
-    Args:
-        *load_country* : A geodataframe containing all the roads of a country.
-        
+    Mapping function to create a dictionary with an aggregated list of railway types. 
+            
     Returns:
-        *load_country* : The same geodataframe but with an additional 'roads' column containing the aggregated road types.
+        *dictionary* : A dictionary with road types and their aggregated equivalent    
     """
 
     dict_map = defaultdict(default_factory,{
-"rail" : "primary_rail",
-"station" : "station",
-"platform_edge":"platform",        
-"platform" : "platform",
-"abandoned" : "disused",
-"razed": "disused",        
-"construction" : "construction",
-"disused" : "disused" ,
-"funicular" : "other" ,
-"light_rail" : "light_rail",
-"miniature" : "other",
-"narrow_gauge" : "other",
-"preserverd" : "other",
-"subway" : "subway",
-"tram" : "tram"
-        
-})
+    "rail" : "primary_rail",
+    "station" : "station",
+    "platform_edge":"platform",        
+    "platform" : "platform",
+    "abandoned" : "disused",
+    "razed": "disused",        
+    "construction" : "construction",
+    "disused" : "disused" ,
+    "funicular" : "other" ,
+    "light_rail" : "light_rail",
+    "miniature" : "other",
+    "narrow_gauge" : "other",
+    "preserverd" : "other",
+    "subway" : "subway",
+    "tram" : "tram"
+            
+    })
 
     return dict_map
 
 def map_roads():
-
     """ 
-    To create a new column with an aggregated list of road types. 
-    
-    Args:
-        *load_country* : A geodataframe containing all the roads of a country.
-        
+    Mapping function to create a dictionary with an aggregated list of road types. 
+            
     Returns:
-        *load_country* : The same geodataframe but with an additional 'roads' column containing the aggregated road types.
+        *dictionary* : A dictionary with road types and their aggregated equivalent
+        
     """
 
     dict_map = defaultdict(default_factory,{
-"disused" : "other",
-"dummy" : "other",
-"planned" : "other",
-"platform" : "other",
-"unsurfaced" : "track",
-"traffic_island" : "other",
-"razed" : "other",
-"abandoned" : "other",
-"services" : "track",
-"proposed" : "other",
-"corridor" : "track",
-"bus_guideway" : "other",
-"bus_stop" : "other",
-"rest_area" : "other",
-"yes" : "other",
-"trail" : "other",
-"escape" : "track",
-"raceway" : "other",
-"emergency_access_point" : "track",
-"emergency_bay" : "track",
-"construction" : "track",
-"bridleway" : "track",
-"cycleway" : "other",
-"footway" : "other",
-"living_street" : "tertiary",
-"path" : "track",
-"pedestrian" : "other",
-"primary" : "primary",
-"primary_link" : "primary",
-"residential" : "tertiary",
-"road" : "secondary",
-"secondary" : "secondary",
-"secondary_link" : "secondary",
-"service" : "tertiary",
-"steps" : "other",
-"tertiary" : "tertiary",
-"tertiary_link" : "tertiary",
-"track" : "track",
-"unclassified" : "tertiary",
-"trunk" : "primary",
-"motorway" : "primary",
-"trunk_link" : "primary",
-"motorway_link" : "primary"
-})
+    "disused" : "other",
+    "dummy" : "other",
+    "planned" : "other",
+    "platform" : "other",
+    "unsurfaced" : "track",
+    "traffic_island" : "other",
+    "razed" : "other",
+    "abandoned" : "other",
+    "services" : "track",
+    "proposed" : "other",
+    "corridor" : "track",
+    "bus_guideway" : "other",
+    "bus_stop" : "other",
+    "rest_area" : "other",
+    "yes" : "other",
+    "trail" : "other",
+    "escape" : "track",
+    "raceway" : "other",
+    "emergency_access_point" : "track",
+    "emergency_bay" : "track",
+    "construction" : "track",
+    "bridleway" : "track",
+    "cycleway" : "other",
+    "footway" : "other",
+    "living_street" : "tertiary",
+    "path" : "track",
+    "pedestrian" : "other",
+    "primary" : "primary",
+    "primary_link" : "primary",
+    "residential" : "tertiary",
+    "road" : "secondary",
+    "secondary" : "secondary",
+    "secondary_link" : "secondary",
+    "service" : "tertiary",
+    "steps" : "other",
+    "tertiary" : "tertiary",
+    "tertiary_link" : "tertiary",
+    "track" : "track",
+    "unclassified" : "tertiary",
+    "trunk" : "primary",
+    "motorway" : "primary",
+    "trunk_link" : "primary",
+    "motorway_link" : "primary"
+    })
         
     return dict_map
