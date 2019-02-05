@@ -9,23 +9,29 @@ import os
 import pandas
 import numpy
 import tqdm
-from scipy import integrate
 
-from utils import sum_tuples,square_m2_cost_range,monetary_risk
-from losses import road_flood,rail_flood,road_cyclone,rail_cyclone,road_earthquake,rail_earthquake,road_bridge_earthquake,road_bridge_flood_cyclone,rail_bridge_earthquake,rail_bridge_flood_cyclone
+from gmtra.utils import sum_tuples,square_m2_cost_range,monetary_risk
+from gmtra.losses import road_flood,rail_flood,road_cyclone,rail_cyclone,road_earthquake,rail_earthquake,road_bridge_earthquake,road_bridge_flood_cyclone,rail_bridge_earthquake,rail_bridge_flood_cyclone
     
-def regional_bridge_risk(file,data_path,param_values,income_lookup,eq_curve,design_tables,depth_threshs,wind_threshs,rail=False):
+def regional_bridge(file,data_path,param_values,income_lookup,eq_curve,design_tables,depth_threshs,wind_threshs,rail=False):
     """
     Function to estimate the summary statistics of all bridge damages in a region
     
     Arguments:
         *file* : path to the .feather file with all bridges of a region.
+        
         *data_path* : file path to location of all data.
+        
         *param_values* : A NumPy Array with sets of parameter values we would like to test.       
+        
         *income_lookup* : A dictionary that relates a country ID (ISO3 code) with its World Bank income goup.
+        
         *eq_curve* : A pandas DataFrame with unique damage curves for earthquake damages.
+        
         *design_table* : A NumPy array that represents the design standards for different bridge types, dependent on road type.
+        
         *depth_thresh* : A list with failure depth thresholds. 
+        
         *wind_threshs* :  A list with failure wind gustspeed thresholds. 
         
     Optional Arguments:
@@ -143,8 +149,11 @@ def regional_cyclone(cycfil,data_path,events,param_values,rail=False):
 
     Arguments:
         *cycfil* : path to the .feather file with all bridges of a region.
+        
         *data_path* : file path to location of all data.
+        
         *events* : A list with the unique cyclone events.
+        
         *param_values* : A NumPy Array with sets of parameter values we would like to test.       
         
     Optional Arguments:
@@ -203,11 +212,16 @@ def regional_earthquake(file,data_path,global_costs,paved_ratios,events,wbreg_lo
 
     Arguments:
         *file* : path to the .feather file with all bridges of a region.
+        
         *data_path* : file path to location of all data.
+        
         *global_costs* : A pandas DataFrame with the total cost for different roads in different World Bank regions. These values 
         are based on the ROCKS database.
-        *paved_ratios* : A pandas DataFrame with road pavement percentages per country for each road type.        
+        
+        *paved_ratios* : A pandas DataFrame with road pavement percentages per country for each road type. 
+        
         *events* : A list with the unique earthquake events.
+        
         *wbreg_lookup* : a dictioniary that relates countries (in ISO3 codes) with World Bank regions.        
         
     Optional Arguments:
@@ -312,13 +326,20 @@ def regional_flood(file,data_path,global_costs,paved_ratios,flood_curve_paved,fl
     
     Arguments:
         *file* : path to the .feather file with all bridges of a region.
+        
         *data_path* : file path to location of all data.
+        
         *global_costs* : A pandas DataFrame with the total cost for different roads in different World Bank regions. These values 
         are based on the ROCKS database.
+        
         *paved_ratios* : A pandas DataFrame with road pavement percentages per country for each road type.
+        
         *flood_curve_paved* : A pandas DataFrame with a set of damage curves for paved roads.
+        
         *flood_curve_unpaved* : A pandas DataFrame with a set of damage curves for unpaved roads.
+        
         *events* : A list with the unique flood events.
+        
         *wbreg_lookup* : a dictioniary that relates a country ID (ISO3 code) with its World Bank region.
         
     Optional Arguments:

@@ -17,7 +17,7 @@ from pathos.multiprocessing import Pool,cpu_count
 from shapely.geometry import MultiPolygon
 from geopy.distance import vincenty
 
-from utils import load_config,create_folder_lookup
+from gmtra.utils import load_config,create_folder_lookup
 
 
 def remove_tiny_shapes(x,regionalized=False):
@@ -342,6 +342,7 @@ def single_country(country,regionalized=False,create_poly_files=False):
     
     Keyword Arguments:
         *regionalized* : Default is **False**. Set to **True** will parallelize the extraction over all regions within a country.
+        
         *create_poly_files* : Default is **False**. Set to **True** will create new .poly files. 
         
     """
@@ -401,7 +402,7 @@ def all_countries(subset = [], regionalized=False,reversed_order=False):
     Clip all countries from the planet osm file and save them to individual osm.pbf files
     
     Optional Arguments:
-        *subset* : allow for a pre-defined subset of countries. Important to use ISO3 codes (default: {[]})
+        *subset* : allow for a pre-defined subset of countries. REquires ISO3 codes. Will run all countries if left empty.
         
         *regionalized* : Default is **False**. Set to **True** if you want to have the regions of a country as well.
         

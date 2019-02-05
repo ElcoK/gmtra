@@ -4,9 +4,8 @@ import geopandas as gpd
 import pandas as pd
 from pathos.multiprocessing import Pool,cpu_count
 
-sys.path.append(os.path.join( '..'))
-from miriam_py.utils import load_config,line_length
-from functions import fetch_roads,map_roads,fetch_railway
+from gmtra.utils import load_config,line_length,map_roads
+from gmtra.fetch import roads,railway
 data_path = load_config()['paths']['data']
 
 def get_region_road_stats(x):
@@ -20,7 +19,7 @@ def get_region_road_stats(x):
         print('{} started!'.format(x[3]))
                 
         road_dict = map_roads()
-        road_gpd = fetch_roads(data_path,x[3],regional=True)
+        road_gpd = roads(data_path,x[3],regional=True)
         road_gpd['length'] = road_gpd.geometry.apply(line_length)
         road_gpd['road_type'] = road_gpd.infra_type.apply(lambda x: road_dict[x])
         road_gpd = road_gpd.groupby('road_type').sum()
@@ -47,7 +46,7 @@ def get_region_rail_stats(n):
         
         print('{} started!'.format(x.GID_2))
                 
-        rail_gpd = fetch_railway(data_path,x.GID_2,regional=True)
+        rail_gpd = railway(data_path,x.GID_2,regional=True)
         rail_gpd['length'] = rail_gpd.geometry.apply(line_length)
         rail_gpd = rail_gpd.groupby('infra_type').sum()
         rail_gpd['continent'] = x.continent

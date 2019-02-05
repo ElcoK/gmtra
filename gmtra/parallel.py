@@ -13,9 +13,9 @@ import geopandas
 from pathos.multiprocessing import Pool,cpu_count
 from SALib.sample import morris
 
-from utils import load_config
-import sensitivity
-import losses
+from gmtra.utils import load_config
+import gmtra.sensitivity as sensitivity
+import gmtra.losses as losses
 
 
 def bridge_losses(rail=False):
@@ -224,6 +224,7 @@ def cyclone_sensitivity(rail=False,region_count=1000):
     Optional Arguments:
         *rail* : Default is **False**. Set to **True** if you would like to 
         intersect the railway assets in a region.
+        
         *region_count* : Default is **1000**. Change this number if you want to include more regions.
         
     """
@@ -280,6 +281,7 @@ def earthquake_sensitivity(rail=False,region_count=1000):
     Optional Arguments:
         *rail* : Default is **False**. Set to **True** if you would like to 
         intersect the railway assets in a region.
+        
         *region_count* : Default is **1000**. Change this number if you want to include more regions.
 
 

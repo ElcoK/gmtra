@@ -12,7 +12,7 @@ import numpy
 
 from tqdm import tqdm
 
-from utils import square_m2_cost_range,monetary_risk,sum_tuples,sensitivity_risk
+from gmtra.utils import square_m2_cost_range,monetary_risk,sum_tuples,sensitivity_risk
 
 pandas.set_option('chained_assignment',None)
 
@@ -22,10 +22,15 @@ def road_bridge_flood_cyclone(x,design_table,depth_threshs,param_values,events,a
     
     Arguments:
         *x* : row in geopandas GeoDataFrame that represents an individual asset.
+        
         *design_table* : A NumPy array that represents the design standards for different bridge types, dependent on road type.
+        
         *depth_thresh* : A list with failure thresholds. Either contains flood depths or gust speeds.
+        
         *param_values* : A NumPy Array with sets of parameter values we would like to test.
+        
         *events* : A list with the unique hazard events in row **x**.
+        
         *all_rps* : A list with all return periods for the hazard that is being considered.
     
     Optional Arguments:
@@ -74,10 +79,15 @@ def rail_bridge_flood_cyclone(x,design_table,depth_threshs,param_values,events,a
     
     Arguments:
         *x* : row in geopandas GeoDataFrame that represents an individual asset.
+        
         *design_table* : A NumPy array that represents the design standards for different bridge types, dependent on road type.
+        
         *depth_thresh* : A list with failure thresholds. Either contains flood depths or gust speeds.
+        
         *param_values* : A NumPy Array with sets of parameter values we would like to test.
+        
         *events* : A list with the unique hazard events in row **x**.
+        
         *all_rps* : A list with all return periods for the hazard that is being considered.
     
     Optional Arguments:
@@ -114,9 +124,13 @@ def road_bridge_earthquake(x,eq_curve,param_values,vals_EQ,all_rps,sensitivity=F
 
      Arguments:
         *x* : A row in a geopandas GeoDataFrame that represents an individual asset.
+        
         *eq_curve* : A pandas DataFrame with unique damage curves for earthquake damages.
+        
         *param_values* : A NumPy Array with sets of parameter values we would like to test.
+        
         *vals_EQ* : A list with the unique hazard events in row **x**.
+        
         *all_rps* : A list with all return periods for the hazard that is being considered.
     
     Optional Arguments:
@@ -153,9 +167,13 @@ def rail_bridge_earthquake(x,eq_curve,param_values,vals_EQ,events,all_rps,sensit
 
      Arguments:
         *x* : A row in a geopandas GeoDataFrame that represents an individual asset.
+        
         *eq_curve* : A pandas DataFrame with unique damage curves for earthquake damages.
+        
         *param_values* : A NumPy Array with sets of parameter values we would like to test.
+        
         *vals_EQ* : A list with the unique hazard events in row **x**.
+        
         *all_rps* : A list with all return periods for the hazard that is being considered.
     
     Optional Arguments:
@@ -188,7 +206,9 @@ def road_cyclone(x,events,param_values,sensitivity=False):
 
     Arguments:
         *x* : row in geopandas GeoDataFrame that represents an individual asset.
+        
         *events* : A list with the unique hazard events in row **x**.
+        
         *param_values* : A NumPy Array with sets of parameter values we would like to test.
     
     Optional Arguments:
@@ -226,7 +246,9 @@ def rail_cyclone(x,events,param_values,sensitivity=False):
 
     Arguments:
         *x* : row in geopandas GeoDataFrame that represents an individual asset.
+        
         *events* : A list with the unique hazard events in row **x**.
+        
         *param_values* : A NumPy Array with sets of parameter values we would like to test.
     
     Optional Arguments:
@@ -265,13 +287,18 @@ def road_earthquake(x,global_costs,paved_ratios,frag_tables,events,wbreg_lookup,
 
     Arguments:
         *x* : row in geopandas GeoDataFrame that represents an individual asset.
+        
         *global_costs* : A pandas DataFrame with the total cost for different roads in different World Bank regions. These values 
         are based on the ROCKS database.
+        
         *paved_ratios* : A pandas DataFrame with road pavement percentages per country for each road type.
+        
         *frag_tables* : A NumPy Array with a set of unique fragility tables which relate PGA to liquefaction 
         to estimate the damage to the asset.
         *events* : A list with the unique earthquake events.
+        
         *wbreg_lookup* : a dictioniary that relates countries (in ISO3 codes) with World Bank regions.
+        
         *param_values* : A NumPy Array with sets of parameter values we would like to test.
     
     Optional Arguments:
@@ -321,9 +348,12 @@ def rail_earthquake(x,frag_tables,events,param_values,sensitivity=False):
 
     Arguments:
         *x* : row in geopandas GeoDataFrame that represents an individual asset.
+        
         *frag_tables* : A NumPy Array with a set of unique fragility tables which relate PGA to liquefaction 
         to estimate the damage to the asset.
+        
         *events* : A list with the unique earthquake events.
+        
         *param_values* : A NumPy Array with sets of parameter values we would like to test.
     
     Optional Arguments:
@@ -361,14 +391,22 @@ def road_flood(x,global_costs,paved_ratios,flood_curve_paved,flood_curve_unpaved
 
     Arguments:
         *x* : row in geopandas GeoDataFrame that represents an individual asset.
+        
         *global_costs* : A pandas DataFrame with the total cost for different roads in different World Bank regions. These values 
         are based on the ROCKS database.
+        
         *paved_ratios* : A pandas DataFrame with road pavement percentages per country for each road type.
+        
         *flood_curve_paved* : A pandas DataFrame with a set of damage curves for paved roads.
+        
         *flood_curve_unpaved* : A pandas DataFrame with a set of damage curves for unpaved roads.
+        
         *events* : A list with the unique flood events.
+        
         *wbreg_lookup* : a dictioniary that relates a country ID (ISO3 code) with its World Bank region.
-        *param_values* : A NumPy Array with sets of parameter values we would like to test.       
+        
+        *param_values* : A NumPy Array with sets of parameter values we would like to test.   
+        
         *val_cols* : A list with the unique flood events in row **x**.
     
     
@@ -422,10 +460,15 @@ def rail_flood(x,curve,events,param_values,val_cols,wbreg_lookup,sensitivity=Fal
 
     Arguments:
         *x* : row in geopandas GeoDataFrame that represents an individual asset.
+        
         *curve* : A pandas DataFrame with a set of damage curves for railways.
+        
         *events* : A list with the unique flood events.
-        *param_values* : A NumPy Array with sets of parameter values we would like to test.       
+        
+        *param_values* : A NumPy Array with sets of parameter values we would like to test.  
+        
         *val_cols* : A list with the unique flood events in row **x**.
+        
         *wbreg_lookup* : a dictioniary that relates a country ID (ISO3 code) with its World Bank region.
     
     Optional Arguments:
@@ -464,12 +507,19 @@ def regional_bridge(file,data_path,param_values,income_lookup,eq_curve,design_ta
     
     Arguments:
         *file* : path to the .feather file with all bridges of a region.
+        
         *data_path* : file path to location of all data.
-        *param_values* : A NumPy Array with sets of parameter values we would like to test.       
+        
+        *param_values* : A NumPy Array with sets of parameter values we would like to test.  
+        
         *income_lookup* : A dictionary that relates a country ID (ISO3 code) with its World Bank income goup.
+        
         *eq_curve* : A pandas DataFrame with unique damage curves for earthquake damages.
+        
         *design_table* : A NumPy array that represents the design standards for different bridge types, dependent on road type.
+        
         *depth_thresh* : A list with failure depth thresholds. 
+        
         *wind_threshs* :  A list with failure wind gustspeed thresholds. 
         
     Optional Arguments:
@@ -587,8 +637,11 @@ def regional_cyclone(cycfil,data_path,events,param_values,rail=False):
 
     Arguments:
         *cycfil* : path to the .feather file with all bridges of a region.
+        
         *data_path* : file path to location of all data.
+        
         *events* : A list with the unique cyclone events.
+        
         *param_values* : A NumPy Array with sets of parameter values we would like to test.       
         
     Optional Arguments:
@@ -643,11 +696,16 @@ def regional_earthquake(file,data_path,global_costs,paved_ratios,events,wbreg_lo
 
     Arguments:
         *file* : path to the .feather file with all bridges of a region.
+        
         *data_path* : file path to location of all data.
+        
         *global_costs* : A pandas DataFrame with the total cost for different roads in different World Bank regions. These values 
         are based on the ROCKS database.
-        *paved_ratios* : A pandas DataFrame with road pavement percentages per country for each road type.        
+        
+        *paved_ratios* : A pandas DataFrame with road pavement percentages per country for each road type.   
+        
         *events* : A list with the unique earthquake events.
+        
         *wbreg_lookup* : a dictioniary that relates countries (in ISO3 codes) with World Bank regions.        
         
     Optional Arguments:
@@ -751,13 +809,20 @@ def regional_flood(file,data_path,global_costs,paved_ratios,flood_curve_paved,fl
     
     Arguments:
         *file* : path to the .feather file with all bridges of a region.
+        
         *data_path* : file path to location of all data.
+        
         *global_costs* : A pandas DataFrame with the total cost for different roads in different World Bank regions. These values 
         are based on the ROCKS database.
+        
         *paved_ratios* : A pandas DataFrame with road pavement percentages per country for each road type.
+        
         *flood_curve_paved* : A pandas DataFrame with a set of damage curves for paved roads.
+        
         *flood_curve_unpaved* : A pandas DataFrame with a set of damage curves for unpaved roads.
+        
         *events* : A list with the unique flood events.
+        
         *wbreg_lookup* : a dictioniary that relates a country ID (ISO3 code) with its World Bank region.
         
     Optional Arguments:

@@ -8,7 +8,7 @@ Created on Tue Jan 29 14:19:30 2019
 import geopandas
 import shapely.wkt
 
-from utils import load_osm_data_region,load_osm_data
+from gmtra.utils import load_osm_data_region,load_osm_data
 
 def roads(data_path,area_name,regional=False):
     """

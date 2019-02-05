@@ -17,6 +17,7 @@ import shutil
 from scipy import integrate
 from geopy.distance import vincenty
 from boltons.iterutils import pairwise
+from rasterstats import point_query
 
 def load_config():
     """Read config.json
@@ -46,6 +47,7 @@ def load_osm_data(data_path,country):
     
     Arguments:
         *data_path* : file path to location of all data.
+        
         *country* : unique ID of the country for which we want to extract data from 
         OpenStreetMap. Must be matching with the country ID used for saving the .osm.pbf file.
 
@@ -61,6 +63,7 @@ def load_osm_data_region(data_path,region):
     
     Arguments:
         *data_path* : file path to location of all data.
+        
         *region* : unique ID of the region for which we want to extract data from 
         OpenStreetMap. Must be matching with the region ID used for saving the .osm.pbf file.
         
@@ -132,6 +135,7 @@ def sensitivity_risk(RPS,loss_list):
     
     Arguments:
         *RPS* : list of return periods in floating probabilities (i.e. [1/10,1/20,1/50]).
+        
         *loss_list* : list of lists with a monetary value per return period within each inner list.
         
     Returns:
@@ -150,6 +154,7 @@ def monetary_risk(RPS,loss_list):
     
     Arguments:
         *RPS* : list of return periods in floating probabilities (i.e. [1/10,1/20,1/50]).
+        
         *loss_list* : list of lists with a monetary value per return period within each inner list.
         
     Returns:
@@ -166,9 +171,11 @@ def exposed_length_risk(x,hzd,RPS):
     
     Arguments:
         *x* : row in a GeoDataFrame that represents an unique infrastructure asset.
+        
         *hzd* : abbrevation of the hazard we want to intersect. **EQ** for earthquakes,
         **Cyc** for cyclones, **FU** for river flooding, **PU** for surface flooding
         and **CF** for coastal flooding.
+        
         *RPS* : list of return periods in floating probabilities (i.e. [1/10,1/20,1/50]). 
         Should match with the hazard we are considering.
     """
@@ -192,6 +199,7 @@ def total_length_risk(x,RPS):
     
     Arguments:
         *x* : row in a GeoDataFrame that represents an unique infrastructure asset.
+        
         *RPS* : list of return periods in floating probabilities (i.e. [1/10,1/20,1/50]). 
         Should match with the hazard we are considering.
     """
@@ -221,18 +229,24 @@ def square_m2_cost_range(x):
 def extract_value_from_gdf(x,gdf_sindex,gdf,column_name):
     """
     Arguments:
-        *x* : row in a GeoDataFrame
-        *gdf_sindex* : spatial index of dataframe of which we want to extract the value
-        *gdf* : GeoDataFrame of which we want to extract the value
-        *column_name* : column that contains the value we want to extract
+        *x* : row in a geopandas GeoDataFrame.
+        *gdf_sindex* : spatial index of dataframe of which we want to extract the value.
+        
+        *gdf* : GeoDataFrame of which we want to extract the value.
+        
+        *column_name* : column that contains the value we want to extract.
         
     Returns:
-        extracted value from other gdf
+        extracted value from other GeoDataFrame
     """
     try:
         return gdf.loc[list(gdf_sindex.intersection(x.bounds))][column_name].values[0]
     except:
         return 0
+
+
+def get_raster_value(centroid,out_image,out_transform):
+    return int(point_query(centroid,out_image,affine=out_transform,nodata=-9999,interpolate='nearest')[0] or 0)   
 
 def default_factory():
     return 'nodata'
