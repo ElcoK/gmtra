@@ -11,14 +11,13 @@ import pandas
 import geopandas
 import rasterio
 from rasterio.mask import mask
+from rasterio.features import shapes
 from shapely.geometry import mapping
 from tqdm import tqdm
-from pathos.multiprocessing import Pool
 
 from gmtra.utils import load_config,create_folder_lookup,map_roads,line_length,get_raster_value
-from gmtra.fetch import roads,railway,bridges
+from gmtra.fetch import roads,railway
 
-from rasterio.features import shapes
 from shapely.geometry import MultiLineString
 import country_converter as coco
 

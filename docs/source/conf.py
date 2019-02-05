@@ -17,7 +17,6 @@ import sys
 import inspect
 import mock
 
-
 __location__ = os.path.join(os.getcwd(), os.path.dirname(
     inspect.getfile(inspect.currentframe())))
 
@@ -25,15 +24,15 @@ __location__ = os.path.join(os.getcwd(), os.path.dirname(
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.join(__location__, '..','..'))
-module_dir = os.path.join(__location__,  '..','..')
+module_dir = os.path.join(__location__,  '..','..','gmtra')
 
-## add list of modules used
-#MOCK_MODULES = ['numpy','pandas','geopandas','matplotlib','matplotlib.pyplot','SALib','SALib.sample','ogr','osgeo','affine',
-#                'SALib.analyze.morris','tqdm','rasterio','shapely.wkt','rasterio.mask','rasterio.features','shapely.geometry',
-#                'matplotlib.colors','matplotlib.patches','rasterio.plot','scipy']
+# add list of modules used
+MOCK_MODULES = ['numpy','pandas','geopandas','matplotlib','matplotlib.pyplot','SALib','SALib.sample','ogr','osgeo','pathos.multiprocessing',
+                'SALib.analyze.morris','tqdm','rasterio','shapely.wkt','rasterio.mask','rasterio.features','shapely.geometry','country_converter',
+                'matplotlib.colors','matplotlib.patches','rasterio.plot','scipy','geopy.distance','boltons.iterutils','rasterstats']
 				
-#for mod_name in MOCK_MODULES:
-#    sys.modules[mod_name] = mock.Mock()
+for mod_name in MOCK_MODULES:
+    sys.modules[mod_name] = mock.Mock()
 
 # -- Project information -----------------------------------------------------
 
