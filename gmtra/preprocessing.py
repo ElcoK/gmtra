@@ -6,7 +6,6 @@ Created on Tue Nov 27 09:55:09 2018
 """
 
 import os
-import sys
 import numpy
 import pandas
 import geopandas
@@ -98,7 +97,7 @@ def global_shapefiles(regionalized=False):
     For now, we will make use of the latest GADM data: https://gadm.org/download_world.html
 
     Optional Arguments:
-        regionalized  : When set to True, this will also create the global_regions.shp file (default: **False**).
+        *regionalized*  : Default is **False**. Set to **True** will also create the global_regions.shp file.
     """
 
     data_path = load_config()['paths']['data']
@@ -183,9 +182,11 @@ def poly_files(data_path,global_shape,save_shapefile=False,regionalized=False):
         *global_shape*: exact path to the global shapefile used to create the poly files.
         
     Optional Arguments:
-        *save_shape_file* : when True, the new shapefile with the countries that we include in this analysis will be saved (default: **False**).     
+        *save_shape_file* : Default is **False**. Set to **True** will the new shapefile with the 
+        countries that we include in this analysis will be saved.     
         
-        *regionalized*  : When set to True, this will perform the analysis on a regional level (default: **False**).
+        *regionalized*  : Default is **False**. Set to **True** will perform the analysis 
+        on a regional level.
     
     Returns:
         *.poly file* for each country in a new dir in the working directory.
@@ -337,11 +338,12 @@ def single_country(country,regionalized=False,create_poly_files=False):
     This function has the option to extract individual regions
     
     Arguments:
-        country : The country for which we want extract the data.
+        *country* : The country for which we want extract the data.
     
     Keyword Arguments:
-        regionalized : If set to True, this will parallelize the extraction over all regions within a country. (default: **False**)
-        create_poly_files : Set to True if we need to create new .poly files. (default: **False**)
+        *regionalized* : Default is **False**. Set to **True** will parallelize the extraction over all regions within a country.
+        *create_poly_files* : Default is **False**. Set to **True** will create new .poly files. 
+        
     """
   
      # set data path
@@ -399,11 +401,11 @@ def all_countries(subset = [], regionalized=False,reversed_order=False):
     Clip all countries from the planet osm file and save them to individual osm.pbf files
     
     Optional Arguments:
-        subset : allow for a pre-defined subset of countries. Important to use ISO3 codes (default: {[]})
+        *subset* : allow for a pre-defined subset of countries. Important to use ISO3 codes (default: {[]})
         
-        regionalized : If you want to have the regions of a country as well, set to True (default: {False})
+        *regionalized* : Default is **False**. Set to **True** if you want to have the regions of a country as well.
         
-        reversed_order : Convenient to work backwards for a second process of the same country set to prevent overlapping calculations (default: {False})
+        *reversed_order* : Default is **False**. Set to **True**  to work backwards for a second process of the same country set to prevent overlapping calculations.
     
     Returns:
         clipped osm.pbf files for the defined set of countries (either the whole world by default or the specified subset)

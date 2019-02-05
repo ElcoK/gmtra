@@ -11,12 +11,12 @@ import rasterio as rio
 import numpy as np
 import geopandas as gpd
 from osgeo import ogr
-import shapely.wkt
-import pandas as pd
 import country_converter as coco
 from collections import defaultdict
 import shutil
 from scipy import integrate
+from geopy.distance import vincenty
+from boltons.iterutils import pairwise
 
 def load_config():
     """Read config.json
@@ -29,6 +29,10 @@ def load_config():
 def clean_fluvial_dirs(hazard_path):
     """
     Remove all the data we do not use.
+    
+    Arguments:
+        *hazard_path* : file path to location of all hazard data.
+    
     """
     for root, dirs, files in os.walk(os.path.join(hazard_path,'InlandFlooding'), topdown=False):
         for name in dirs:
@@ -39,6 +43,12 @@ def clean_fluvial_dirs(hazard_path):
 def load_osm_data(data_path,country):
     """
     Load osm data for an entire country.
+    
+    Arguments:
+        *data_path* : file path to location of all data.
+        *country* : unique ID of the country for which we want to extract data from 
+        OpenStreetMap. Must be matching with the country ID used for saving the .osm.pbf file.
+
     """
     osm_path = os.path.join(data_path,'country_osm','{}.osm.pbf'.format(country))
 
@@ -48,15 +58,27 @@ def load_osm_data(data_path,country):
 def load_osm_data_region(data_path,region):
     """
     Load osm data for a specific region.
+    
+    Arguments:
+        *data_path* : file path to location of all data.
+        *region* : unique ID of the region for which we want to extract data from 
+        OpenStreetMap. Must be matching with the region ID used for saving the .osm.pbf file.
+        
     """    
     osm_path = os.path.join(data_path,'region_osm','{}.osm.pbf'.format(region))
 
     driver=ogr.GetDriverByName('OSM')
     return driver.Open(osm_path)
 
-def load_hazard_map(EQ_path):
-
-    with rio.open(EQ_path) as src:
+def load_hazard_map(hzd_path):
+    """
+    Load specific hazard map.
+    
+    Arguments:
+        *hzd_path* : file path to location of the hazard map.
+        
+    """    
+    with rio.open(hzd_path) as src:
         affine = src.affine
         # Read as numpy array
         array = src.read(1)
@@ -76,23 +98,15 @@ def load_ssbn_hazard(hazard_path,country_full,country_ISO2,flood_type,flood_type
     
     return array,affine
 
-def EQ_hazard(hazard_path,country_full,country_ISO2,flood_type,flood_type_abb,rp):
-
-    flood_path = os.path.join(hazard_path,'InlandFlooding',country_full,'{}_{}'.format(country_ISO2,flood_type),'{}-{}-{}-1.tif'.format(country_ISO2,flood_type_abb,rp))    
-
-    with rio.open(flood_path) as src:
-        affine = src.affine
-        array = src.read(1)
-        array[array == 999] = -9999
-    
-    return array,affine
 
 def gdf_clip(gdf,clip_geom):
     """
+    Function to clip a GeoDataFrame with a shapely geometry.
+    
     Arguments:
         *gdf* : geopandas GeoDataFrame that we want to clip
         
-         *clip_geom* : shapely geometry of region for what we do the calculation
+         *clip_geom* : shapely geometry of region for which we do the calculation.
                
     Returns:
         *gdf* : clipped geopandas GeoDataframe
@@ -101,11 +115,27 @@ def gdf_clip(gdf,clip_geom):
 
 def sum_tuples(l):
     """
+    Function to sum a list of tuples.
+    
+    Arguments:
+        *l* : list of tuples.
+        
+    Returns:
+        *tuple* : a tuple with the sum of the list of tuples.
+    
     """
     return tuple(sum(x) for x in zip(*l))
 
 def monetary_risk(RPS,loss_list):
     """
+    Function to estimate the monetary risk for a particular hazard.
+    
+    Arguments:
+        *RPS* : list of return periods in floating probabilities (i.e. [1/10,1/20,1/50]).
+        *loss_list* : list of lists with a monetary value per return period within each inner list.
+        
+    Returns:
+        *collect_risks* : a list of all risks for each inner list of the input list.
     """
     collect_risks = []
     for y in range(7):
@@ -114,7 +144,15 @@ def monetary_risk(RPS,loss_list):
 
 def exposed_length_risk(x,hzd,RPS):
     """
+    Function to estimate risk in terms of exposed kilometers.
     
+    Arguments:
+        *x* : row in a GeoDataFrame that represents an unique infrastructure asset.
+        *hzd* : abbrevation of the hazard we want to intersect. **EQ** for earthquakes,
+        **Cyc** for cyclones, **FU** for river flooding, **PU** for surface flooding
+        and **CF** for coastal flooding.
+        *RPS* : list of return periods in floating probabilities (i.e. [1/10,1/20,1/50]). 
+        Should match with the hazard we are considering.
     """
     if hzd == 'EQ':
         return integrate.simps([x.length_EQ_rp250,x.length_EQ_rp475,x.length_EQ_rp975,x.length_EQ_rp1500,x.length_EQ_rp2475][::-1], x=RPS[::-1])
@@ -130,13 +168,26 @@ def exposed_length_risk(x,hzd,RPS):
         return integrate.simps([x['length_CF-10'],x['length_CF-20'],x['length_CF-50'],x['length_CF-100'],x['length_CF-200'],x['length_CF-500'],
                                 x['length_CF-1000']][::-1], x=RPS[::-1])
 
-def total_length_risk(x,hazard,RPS):
+def total_length_risk(x,RPS):
     """
+    Function to estimate risk if all assets would have been exposed.
+    
+    Arguments:
+        *x* : row in a GeoDataFrame that represents an unique infrastructure asset.
+        *RPS* : list of return periods in floating probabilities (i.e. [1/10,1/20,1/50]). 
+        Should match with the hazard we are considering.
     """
     return integrate.simps([x.length]*len(RPS), x=RPS[::-1])
 
 def square_m2_cost_range(x):
     """
+    Function to specify the range of possible costs for a bridge.
+    
+    Arguments:
+        *x* : row in a GeoDataFrame that represents an unique bridge asset.
+        
+    Returns:
+        *list*: a list with the range of possible bridge costs.
     """
     short_bridge = [int(10.76*115),int(10.76*200)]
     medium_bridge = [int(10.76*85),int(10.76*225)]
@@ -152,10 +203,10 @@ def square_m2_cost_range(x):
 def extract_value_from_gdf(x,gdf_sindex,gdf,column_name):
     """
     Arguments:
-        x : row of dataframe
-        gdf_sindex : spatial index of dataframe of which we want to extract the value
-        gdf : GeoDataFrame of which we want to extract the value
-        column_name : column that contains the value we want to extract
+        *x* : row in a GeoDataFrame
+        *gdf_sindex* : spatial index of dataframe of which we want to extract the value
+        *gdf* : GeoDataFrame of which we want to extract the value
+        *column_name* : column that contains the value we want to extract
         
     Returns:
         extracted value from other gdf
@@ -169,6 +220,10 @@ def default_factory():
     return 'nodata'
 
 def create_folder_lookup():
+    """
+    Function to create a dictionary in which we can lookup the 
+    folder path where the surface and river flood maps are located for a country.
+    """
 
     data_path = load_config()['paths']['data']
     hazard_path =  load_config()['paths']['hazard_data']
@@ -231,6 +286,29 @@ def create_folder_lookup():
           else fullback[x] for x in glob_data_full]
     return dict(zip(ISO3_lookup,glob_name_folder))
 
+def line_length(line, ellipsoid='WGS-84'):
+    """Length of a line in meters, given in geographic coordinates
+
+    Adapted from https://gis.stackexchange.com/questions/4022/looking-for-a-pythonic-way-to-calculate-the-length-of-a-wkt-linestring#answer-115285
+
+    Arguments:
+        *line* : a shapely LineString object with WGS-84 coordinates
+        
+    Optional Arguments:    
+        *ellipsoid* : string name of an ellipsoid that `geopy` understands (see
+            http://geopy.readthedocs.io/en/latest/#module-geopy.distance)
+
+    Returns:
+        Length of line in meters
+    """
+    if line.geometryType() == 'MultiLineString':
+        return sum(line_length(segment) for segment in line)
+
+    return sum(
+        vincenty(a, b, ellipsoid=ellipsoid).kilometers
+        for a, b in pairwise(line.coords)
+    )
+
 def map_railway():
     """ 
     Mapping function to create a dictionary with an aggregated list of railway types. 
@@ -259,6 +337,7 @@ def map_railway():
     })
 
     return dict_map
+
 
 def map_roads():
     """ 

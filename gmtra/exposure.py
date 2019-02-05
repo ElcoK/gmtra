@@ -6,7 +6,6 @@ Created on Tue Nov 27 09:53:23 2018
 """
 
 import os
-import sys
 import pandas
 import geopandas
 
@@ -21,6 +20,15 @@ pandas.set_option('chained_assignment',None)
 
 def regional_roads(region,prot_lookup,data_path):
     """
+    Function to get summarized exposure values for each region for all road assets.
+    
+    Arguments:
+        *region* : unique ID of the region for which we want to get exposure statistics.
+        *prot_lookup* : dictionary with dike design standards for a region.
+        *data_path* : file path to location of all data.
+    
+    Returns:
+        *dataframe* : a pandas DataFrame with exposure statistics.
     """
     try:
         print('{} started!'.format(region[3]))
@@ -153,6 +161,15 @@ def regional_roads(region,prot_lookup,data_path):
 
 def regional_railway(region,prot_lookup,data_path):
     """
+    Function to get summarized exposure values for each region for all railway assets.
+    
+    Arguments:
+        *region* : unique ID of the region for which we want to get exposure statistics.
+        *prot_lookup* : dictionary with dike design standards for a region.
+        *data_path* : file path to location of all data.
+    
+    Returns:
+        *dataframe* : a pandas DataFrame with exposure statistics.
     """
     try:
         print('{} started!'.format(region[3]))
@@ -278,8 +295,14 @@ def regional_railway(region,prot_lookup,data_path):
     except:
         print('{} failed'.format(region[3]))
 
-def all_regions_parallel(road=True): 
+def all_regions_parallel(rail=False): 
     """
+    Get exposure statistics for all road or railway assets in all regions.
+    
+    Optional Arguments:
+        *rail* : Default is **False**. Set to **True** if you would like to 
+        intersect the railway assets in a region.
+    
     """
     data_path = load_config()['paths']['data']
     global_regions = geopandas.read_file(os.path.join(data_path,'input_data','global_regions_v2.shp'))
@@ -295,7 +318,7 @@ def all_regions_parallel(road=True):
     prot_lookups = [prot_lookup]*len(regions)
     data_paths = [data_path]*len(regions)    
 
-    if road:
+    if not rail:
         with Pool(cpu_count()-1) as pool: 
             collect_output = pool.starmap(regional_roads,zip(regions,prot_lookups,data_paths),chunksize=1) 
     
