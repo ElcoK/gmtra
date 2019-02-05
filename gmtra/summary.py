@@ -2,7 +2,6 @@ import os
 import sys
 import geopandas as gpd
 import pandas as pd
-import numpy as np
 from pathos.multiprocessing import Pool,cpu_count
 
 sys.path.append(os.path.join( '..'))
@@ -80,26 +79,16 @@ def all_country_stats():
     global_countries = gpd.read_file(os.path.join(data_path,'input_data','global_countries.shp'))
     list_iso3 = [x.split('_')[0] for x in global_countries.ISO_3digit]
 
-    with Pool(6) as pool: 
+    with Pool(cpu_count()-1) as pool: 
         collect_countries = pool.map(get_country_road_stats,list_iso3,chunksize=1) 
     
     pd.concat(collect_countries).to_csv(os.path.join(data_path,'summarized','country_road_stats.csv'))    
 
-def get_all_stats(from_=0,to_=46562):
+def all_region_stats():
     data_path = load_config()['paths']['data']
     global_data = gpd.read_file(os.path.join(data_path,'input_data','global_regions_v2.shp'))
     global_data = global_data.loc[global_data.GID_2.isin([(x.split('.')[0]) for x in os.listdir(os.path.join(data_path,'region_osm'))])]
 
-    with Pool(24) as pool: 
-        #pool.map(get_region_road_stats,np.arange(int(from_), int(to_)+1, 1),chunksize=1) 
+    with Pool(cpu_count()-1) as pool: 
         pool.map(get_region_road_stats,list(global_data.to_records()),chunksize=1) 
 
-if __name__ == "__main__": 
-#    data_path = load_config()['paths']['data']
-#    global_data = gpd.read_file(os.path.join(data_path,'input_data','global_regions_v2.shp'))
-#    global_data = global_data.loc[global_data.GID_2.isin([(x.split('.')[0]) for x in os.listdir(os.path.join(data_path,'region_osm'))])]
-
-#   for region in list(global_data.to_records())[::-1]:
-#        get_region_road_stats(region)
-#    get_all_stats(from_=0,to_=46433)
-    get_all_stats()
