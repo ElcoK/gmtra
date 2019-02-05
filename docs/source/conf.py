@@ -27,9 +27,9 @@ sys.path.insert(0, os.path.join(__location__, '..','..'))
 module_dir = os.path.join(__location__,  '..','..','gmtra')
 
 # add list of modules used
-MOCK_MODULES = ['numpy','pandas','geopandas','matplotlib','matplotlib.pyplot','SALib','SALib.sample','ogr','osgeo','pathos.multiprocessing',
-                'SALib.analyze.morris','tqdm','rasterio','shapely.wkt','rasterio.mask','rasterio.features','shapely.geometry','country_converter',
-                'matplotlib.colors','matplotlib.patches','rasterio.plot','scipy','geopy.distance','boltons.iterutils','rasterstats']
+MOCK_MODULES = ['numpy','pandas','geopandas','SALib.sample','ogr','osgeo','pathos.multiprocessing','shapely',
+                'tqdm','rasterio','shapely.wkt','rasterio.mask','rasterio.features','shapely.geometry','country_converter',
+                'rasterio.plot','scipy','geopy.distance','boltons.iterutils','rasterstats']
 				
 for mod_name in MOCK_MODULES:
     sys.modules[mod_name] = mock.Mock()
