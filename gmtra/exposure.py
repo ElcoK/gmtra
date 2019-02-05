@@ -1,8 +1,9 @@
-# -*- coding: utf-8 -*-
 """
-Created on Tue Nov 27 09:53:23 2018
+Source code for Global Multihazard Transport Risk Analysis (GMTRA)
 
-@author: cenv0574
+Functions to perform the exposure analysis.
+
+Copyright (C) 2019 Elco Koks. All versions released under the GNU Affero General Public License v3.0 license.
 """
 
 import os
@@ -24,7 +25,9 @@ def regional_roads(region,prot_lookup,data_path):
     
     Arguments:
         *region* : unique ID of the region for which we want to get exposure statistics.
+        
         *prot_lookup* : dictionary with dike design standards for a region.
+        
         *data_path* : file path to location of all data.
     
     Returns:
@@ -165,7 +168,9 @@ def regional_railway(region,prot_lookup,data_path):
     
     Arguments:
         *region* : unique ID of the region for which we want to get exposure statistics.
+        
         *prot_lookup* : dictionary with dike design standards for a region.
+        
         *data_path* : file path to location of all data.
     
     Returns:

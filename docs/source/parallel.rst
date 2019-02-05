@@ -1,15 +1,15 @@
 
 =======================
-Parallel functions
+9. Parallel functions
 =======================
 
-.. autofunction:: gmtra.parallel.bridge_losses
+.. autofunction:: gmtra.parallel.bridge_damage
 
-.. autofunction:: gmtra.parallel.cyclone_losses
+.. autofunction:: gmtra.parallel.cyclone_damage
 
-.. autofunction:: gmtra.parallel.earthquake_losses
+.. autofunction:: gmtra.parallel.earthquake_damage
 
-.. autofunction:: gmtra.parallel.flood_losses
+.. autofunction:: gmtra.parallel.flood_damage
 
 .. autofunction:: gmtra.parallel.cyclone_sensitivity
 

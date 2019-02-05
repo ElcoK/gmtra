@@ -1,8 +1,9 @@
-# -*- coding: utf-8 -*-
 """
-Created on Tue Jan 29 14:19:30 2019
+Source code for Global Multihazard Transport Risk Analysis (GMTRA)
 
-@author: cenv0574
+Functions to extract infrastructure asset data from OpenStreetMap.
+
+Copyright (C) 2019 Elco Koks. All versions released under the GNU Affero General Public License v3.0 license.
 """
 
 import geopandas

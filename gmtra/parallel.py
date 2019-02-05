@@ -1,8 +1,9 @@
-# -*- coding: utf-8 -*-
 """
-Created on Tue Feb  5 15:46:10 2019
+Source code for Global Multihazard Transport Risk Analysis (GMTRA)
 
-@author: cenv0574
+Functions to run all regional code parallel.
+
+Copyright (C) 2019 Elco Koks. All versions released under the GNU Affero General Public License v3.0 license.
 """
 
 import os
@@ -15,10 +16,53 @@ from SALib.sample import morris
 
 from gmtra.utils import load_config
 import gmtra.sensitivity as sensitivity
-import gmtra.losses as losses
+import gmtra.damage as damage
+from gmtra.hazard import region_intersection
+from gmtra.preprocessing import region_bridges
 
+def get_all_bridges():
+    data_path = load_config()['paths']['data']
 
-def bridge_losses(rail=False):
+    global_regions = geopandas.read_file(os.path.join(data_path,'input_data','global_regions_v2.shp'))
+    global_regions = global_regions.loc[(global_regions.GID_2.isin([(x.split('.')[0]) for x in os.listdir(os.path.join(data_path,'region_osm'))]))]
+
+    with Pool(cpu_count()-1) as pool: 
+        collect_bridges = pool.map(region_bridges,list(global_regions.to_records()),chunksize=1) 
+
+    all_bridges = pandas.concat(collect_bridges)
+    all_bridges.reset_index(inplace=True,drop=True)
+    all_bridges.to_csv(os.path.join(data_path,'output_data','osm_bridges.csv'))
+
+def hazard_intersection(hzd,rail=False,from_=0,to_=46433):
+    """
+    Function to run intersection with hazard data for all regions parallel.
+    """    
+    road = not rail
+    railway = rail
+    
+    hzds = [hzd]*int(to_)
+    Roads = [road]*int(to_)
+    Railways = [railway]*int(to_)
+
+    data_path = load_config()['paths']['data']
+
+    global_regions = geopandas.read_file(os.path.join(data_path,'input_data','global_regions_v2.shp'))
+    global_regions = global_regions.loc[global_regions.GID_2.isin([(x.split('.')[0]) for x in os.listdir(os.path.join(data_path,'region_osm'))])]
+
+    if road:
+        global_regions = global_regions.loc[(global_regions.GID_2.isin([x[:-10] for x in os.listdir(os.path.join(data_path,'road_stats'))]))]
+        global_regions = global_regions.loc[~(global_regions.GID_2.isin(['_'.join((x.split('.')[0]).split('_')[:4]) for x in os.listdir(os.path.join(data_path,'output_{}_full'.format(hzd)))]))]
+    else:
+        global_regions = global_regions.loc[(global_regions.GID_2.isin([x[:-10] for x in os.listdir(os.path.join(data_path,'railway_stats'))]))]
+        global_regions = global_regions.loc[~(global_regions.GID_2.isin(['_'.join((x.split('.')[0]).split('_')[:4]) for x in os.listdir(os.path.join(data_path,'output_{}_rail_full'.format(hzd)))]))]
+
+    regions = list(global_regions.index)[::-1]
+    print(len(regions))
+
+    with Pool(cpu_count()-1) as pool: 
+        pool.starmap(region_intersection,zip(regions,hzds,Roads,Railways),chunksize=1) 
+
+def bridge_damage(rail=False):
     """
     Function to calculate the damage to bridges for all regions and all hazards.
     
@@ -64,7 +108,7 @@ def bridge_losses(rail=False):
     rail_list = [rail]*len(all_files)
 
     with Pool(cpu_count()-1) as pool: 
-        collect_risks = pool.starmap(losses.regional_bridge,zip(all_files,data_p_list,param_list,income_list,eq_curve_list,design_list,depth_list,wind_list,rail_list),chunksize=1) 
+        collect_risks = pool.starmap(damage.regional_bridge,zip(all_files,data_p_list,param_list,income_list,eq_curve_list,design_list,depth_list,wind_list,rail_list),chunksize=1) 
     
     if not rail:
         pandas.concat(collect_risks).to_csv(os.path.join(data_path,'summarized','bridge_risk_road.csv'))
@@ -72,7 +116,7 @@ def bridge_losses(rail=False):
         pandas.concat(collect_risks).to_csv(os.path.join(data_path,'summarized','bridge_risk_rail.csv'))
         
 
-def cyclone_losses(rail=False):  
+def cyclone_damage(rail=False):  
     """
     Function to calculate the cyclone damage to road or railway assets for all regions.
 
@@ -116,10 +160,10 @@ def cyclone_losses(rail=False):
 
     
     with Pool(cpu_count()-1) as pool: 
-        pool.starmap(losses.regional_cyclone,zip(all_files,data_paths,event_list,param_list,rail_list),chunksize=1) 
+        pool.starmap(damage.regional_cyclone,zip(all_files,data_paths,event_list,param_list,rail_list),chunksize=1) 
 
 
-def earthquake_losses(rail=False):  
+def earthquake_damage(rail=False):  
     """
     Function to calculate the earthquake damage to road or railway assets for all regions.
 
@@ -156,13 +200,17 @@ def earthquake_losses(rail=False):
     
     
     with Pool(cpu_count()-1) as pool: 
-        pool.starmap(losses.regional_earthquake,zip(all_files,data_paths,pav_cost_list,pav_rat_list,events_list,wbreg_list,rail_list),chunksize=1) 
+        pool.starmap(damage.regional_earthquake,zip(all_files,data_paths,pav_cost_list,pav_rat_list,events_list,wbreg_list,rail_list),chunksize=1) 
 
               
-def flood_losses(hazard,rail=False):  
+def flood_damage(hazard,rail=False):  
     """
     Function to calculate the flood damage to road or railway assets for all regions.
 
+    Arguments:
+         *hzd* : abbrevation of the hazard we want to intersect. **FU** for 
+         river flooding, **PU** for surface flooding and **CF** for coastal flooding.
+        
     Optional Arguments:
         *rail* : Default is **False**. Set to **True** if you would like to 
         intersect the railway assets in a region.
@@ -212,7 +260,7 @@ def flood_losses(hazard,rail=False):
     rail_list = [rail]*len(all_files)
  
     with Pool(cpu_count()-1) as pool: 
-       pool.starmap(losses.regional_flood,zip(all_files,data_paths,pav_cost_list,pav_rat_list,
+       pool.starmap(damage.regional_flood,zip(all_files,data_paths,pav_cost_list,pav_rat_list,
                                                           cur_pav_list,cur_unpav_list,events_list,wbreg_list,rail_list),chunksize=1) 
     
 
@@ -225,7 +273,7 @@ def cyclone_sensitivity(rail=False,region_count=1000):
         *rail* : Default is **False**. Set to **True** if you would like to 
         intersect the railway assets in a region.
         
-        *region_count* : Default is **1000**. Change this number if you want to include more regions.
+        *region_count* : Default is **1000**. Change this number if you want to include a different amount of regions.
         
     """
 
@@ -282,7 +330,7 @@ def earthquake_sensitivity(rail=False,region_count=1000):
         *rail* : Default is **False**. Set to **True** if you would like to 
         intersect the railway assets in a region.
         
-        *region_count* : Default is **1000**. Change this number if you want to include more regions.
+        *region_count* : Default is **1000**. Change this number if you want to include a different amount of regions.
 
 
     """
@@ -333,7 +381,8 @@ def flood_sensitivity(hazard,rail=False,region_count=1000):
     Optional Arguments:
         *rail* : Default is **False**. Set to **True** if you would like to 
         intersect the railway assets in a region.
-        *region_count* : Default is **1000**. Change this number if you want to include more regions.
+        
+        *region_count* : Default is **1000**. Change this number if you want to include a different amount of regions.
 
     """
     data_path = load_config()['paths']['data']
@@ -401,3 +450,35 @@ def flood_sensitivity(hazard,rail=False,region_count=1000):
             collect_output = pool.starmap(sensitivity.regional_flood,zip(all_files,hazards,data_paths,cur_list,events_list,wbreg_list),chunksize=1) 
             pandas.concat(collect_output).to_csv(os.path.join(data_path,'summarized','sa_{}_rai.csv').format(hazard))
 
+       
+def get_all_tree_values():
+    """
+    Function to run intersection for all regions parallel.
+    """
+    data_path = load_config()['paths']['data']
+
+    global_regions = geopandas.read_file(os.path.join(data_path,'input_data','global_regions_v2.shp'))
+    global_regions = global_regions.loc[~(global_regions.GID_2.isin([(x.split('.')[0]) for x in os.listdir(os.path.join(data_path,'tree_cover_rail'))]))]
+    global_regions = global_regions.loc[(global_regions.GID_2.isin([x[:-10] for x in os.listdir(os.path.join(data_path,'railway_stats'))]))]
+
+
+    with Pool(40) as pool:
+        pool.map(get_tree_density,list(global_regions.to_records()),chunksize=1) 
+
+
+def get_all_liquefaction_overlays():
+    """
+    Function to run intersection for all regions parallel.
+    """
+    data_path = load_config()['paths']['data']
+
+    global_regions = geopandas.read_file(os.path.join(data_path,'input_data','global_regions_v2.shp'))
+    global_regions = global_regions.loc[(global_regions.GID_2.isin([(x.split('.')[0]) for x in os.listdir(os.path.join(data_path,'region_osm'))]))]
+    global_regions = global_regions.loc[~(global_regions.GID_2.isin([(x.split('.')[0][:-4]) for x in os.listdir(os.path.join(data_path,'liquefaction_road'))]))]
+
+    global_regions['Size'] = global_regions.area
+    global_regions = global_regions.sort_values(by='Size')
+    global_regions.drop(['Size'],inplace=True,axis=1)
+
+    with Pool(40) as pool:
+        pool.map(get_liquefaction_region,list(global_regions.to_records()),chunksize=1) 

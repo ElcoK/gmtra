@@ -1,8 +1,9 @@
-# -*- coding: utf-8 -*-
 """
-Created on Tue Nov 27 09:53:41 2018
+Source code for Global Multihazard Transport Risk Analysis (GMTRA)
 
-@author: cenv0574
+Functions to perform a sensitivity analysis.
+
+Copyright (C) 2019 Elco Koks. All versions released under the GNU Affero General Public License v3.0 license.
 """
 
 import os
@@ -11,7 +12,7 @@ import numpy
 import tqdm
 
 from gmtra.utils import sum_tuples,square_m2_cost_range,monetary_risk
-from gmtra.losses import road_flood,rail_flood,road_cyclone,rail_cyclone,road_earthquake,rail_earthquake,road_bridge_earthquake,road_bridge_flood_cyclone,rail_bridge_earthquake,rail_bridge_flood_cyclone
+from gmtra.damage import road_flood,rail_flood,road_cyclone,rail_cyclone,road_earthquake,rail_earthquake,road_bridge_earthquake,road_bridge_flood_cyclone,rail_bridge_earthquake,rail_bridge_flood_cyclone
     
 def regional_bridge(file,data_path,param_values,income_lookup,eq_curve,design_tables,depth_threshs,wind_threshs,rail=False):
     """

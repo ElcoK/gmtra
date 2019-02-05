@@ -1,6 +1,6 @@
 
 =======================
-Main functions
+6. Exposure analysis
 =======================
 
 Estimate exposure of all roads in a region

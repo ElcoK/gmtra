@@ -1,8 +1,9 @@
-# -*- coding: utf-8 -*-
 """
-Created on Tue Nov 27 09:52:40 2018
+Source code for Global Multihazard Transport Risk Analysis (GMTRA)
 
-@author: cenv0574
+General functions to be used throughout the code.
+
+Copyright (C) 2019 Elco Koks. All versions released under the GNU Affero General Public License v3.0 license.
 """
 
 import os
@@ -91,6 +92,29 @@ def load_hazard_map(hzd_path):
     return array,affine
 
 def load_ssbn_hazard(hazard_path,country_full,country_ISO2,flood_type,flood_type_abb,rp):
+    """
+    Function to load a SSBN hazard map.
+    
+    Arguments:
+        *hazard_path* : Path to location of all hazard data.
+            
+        *country_full* : Full name of country. Obtained from **create_folder_lookup**. 
+            
+        *country_ISO2* : ISO2 country code of the country.
+            
+        *flood_type* : Specifies whether it is a **pluvial** or **fluvial** flood.
+            
+        *flood_type_abb* : Abbrevated code of the flood type. **FU** for river flooding, **PU** for surface flooding.
+            
+        *rp* : Return period of the flood map we want to extract.
+        
+    Returns:
+        *array*: NumPy Array with the raster values.
+        
+        *affine* : Affine of the **array**.
+        
+    """
+    
 
     flood_path = os.path.join(hazard_path,'InlandFlooding',country_full,'{}_{}_merged'.format(country_ISO2,flood_type),'{}-{}-{}.tif'.format(country_ISO2,flood_type_abb,rp))    
 
@@ -107,9 +131,9 @@ def gdf_clip(gdf,clip_geom):
     Function to clip a GeoDataFrame with a shapely geometry.
     
     Arguments:
-        *gdf* : geopandas GeoDataFrame that we want to clip
+        *gdf* : geopandas GeoDataFrame that we want to clip.
         
-         *clip_geom* : shapely geometry of region for which we do the calculation.
+        *clip_geom* : shapely geometry of region for which we do the calculation.
                
     Returns:
         *gdf* : clipped geopandas GeoDataframe
@@ -178,6 +202,9 @@ def exposed_length_risk(x,hzd,RPS):
         
         *RPS* : list of return periods in floating probabilities (i.e. [1/10,1/20,1/50]). 
         Should match with the hazard we are considering.
+        
+    Returns:
+        *risk value* : a floating number which represents the annual exposed kilometers of infrastructure.    
     """
     if hzd == 'EQ':
         return integrate.simps([x.length_EQ_rp250,x.length_EQ_rp475,x.length_EQ_rp975,x.length_EQ_rp1500,x.length_EQ_rp2475][::-1], x=RPS[::-1])
@@ -245,8 +272,23 @@ def extract_value_from_gdf(x,gdf_sindex,gdf,column_name):
         return 0
 
 
-def get_raster_value(centroid,out_image,out_transform):
-    return int(point_query(centroid,out_image,affine=out_transform,nodata=-9999,interpolate='nearest')[0] or 0)   
+def get_raster_value(centroid,raster_image,out_transform):
+    """
+    Function to extract a value from a raster file for a given shapely Point.
+    
+    Arguments:
+        *centroid* : shapely Point
+        
+        *raster_image* : NumPy array, read by rasterio.
+        
+        *out_transform* : Affine of **raster_image*.
+        
+    Returns:
+        
+        *int* : integer value from the raster at the location of the **centroid**. Will return **zero** when there is no intersection.
+    
+    """
+    return int(point_query(centroid,raster_image,affine=out_transform,nodata=-9999,interpolate='nearest')[0] or 0)   
 
 def default_factory():
     return 'nodata'
@@ -326,10 +368,9 @@ def line_length(line, ellipsoid='WGS-84'):
     Arguments:
         *line* : a shapely LineString object with WGS-84 coordinates
         
-    Optional Arguments:    
-        *ellipsoid* : string name of an ellipsoid that `geopy` understands (see
-            http://geopy.readthedocs.io/en/latest/#module-geopy.distance)
-
+    Optional Arguments:
+        *ellipsoid* : string name of an ellipsoid that `geopy` understands (see http://geopy.readthedocs.io/en/latest/#module-geopy.distance)
+        
     Returns:
         Length of line in meters
     """

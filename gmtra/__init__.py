@@ -1,6 +1,7 @@
-"""DamageScanner - a directe damage assessment toolkit
+"""
+Source code for Global Multihazard Transport Risk Analysis (GMTRA)
 
-Copyright (C) 2019 Elco Koks. All versions released under the MIT license.
+Copyright (C) 2019 Elco Koks. All versions released under the GNU Affero General Public License v3.0 license.
 """
 import pkg_resources
 

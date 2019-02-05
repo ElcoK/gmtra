@@ -1,8 +1,9 @@
-# -*- coding: utf-8 -*-
 """
-Created on Tue Nov 27 09:55:09 2018
+Source code for Global Multihazard Transport Risk Analysis (GMTRA)
 
-@author: cenv0574
+Preprocessing functions.
+
+Copyright (C) 2019 Elco Koks. All versions released under the GNU Affero General Public License v3.0 license.
 """
 
 import os
@@ -17,8 +18,41 @@ from pathos.multiprocessing import Pool,cpu_count
 from shapely.geometry import MultiPolygon
 from geopy.distance import vincenty
 
-from gmtra.utils import load_config,create_folder_lookup
+from gmtra.utils import load_config,create_folder_lookup,map_roads,line_length
+from gmtra.fetch import bridges
 
+def region_bridges(x):
+    """
+    This function will extract all bridges from OpenStreetMap for the specified region.
+    
+    Arguments:
+        *x* : a row in a geopandas GeoDataFrame with characteristics of the region for which we are extracting the bridges.
+            
+    Returns:
+        *GeoDataFrame* : A geopandas GeoDataFrame with all bridges in a region. Will also save this to a .csv file.
+                      
+    """
+    region = x[3]
+    try:
+        data_path = load_config()['paths']['data']
+            
+        bridges_osm = bridges(data_path,region,regional=True)
+
+        bridges_osm['length'] = bridges_osm.geometry.apply(line_length)
+        bridges_osm['length'] = bridges_osm['length']*1000
+        road_dict = map_roads()
+        bridges_osm['road_type'] = bridges_osm.road_type.apply(lambda y: road_dict[y])        
+        bridges_osm['region'] = region
+        bridges_osm['country'] = region[:3]        
+        
+        bridges_osm.to_csv(os.path.join(data_path,'bridges_osm','{}.csv'.format(region)))
+        
+        print('{} finished!'.format(region))
+        
+        return bridges_osm
+    
+    except Exception as e:
+        print('Failed to finish {} because of {}!'.format(region,e))
 
 def remove_tiny_shapes(x,regionalized=False):
     """This function will remove the small shapes of multipolygons. Will reduce the size of the file.
@@ -27,7 +61,7 @@ def remove_tiny_shapes(x,regionalized=False):
         *x* : a geometry feature (Polygon) to simplify. Countries which are very large will see larger (unhabitated) islands being removed.
     
     Optional Arguments:
-        *regionalized* : set to True to allow for different threshold settings (default: **False**).
+        *regionalized*  : Default is **False**. Set to **True** will use lower threshold settings (default: **False**).
         
     Returns:
         *MultiPolygon* : a shapely geometry MultiPolygon without tiny shapes.

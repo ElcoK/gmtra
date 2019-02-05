@@ -1,8 +1,9 @@
-# -*- coding: utf-8 -*-
 """
-Created on Tue Nov 27 10:00:35 2018
+Source code for Global Multihazard Transport Risk Analysis (GMTRA)
 
-@author: cenv0574
+Function to intersect the infrastructure asset data with global hazard maps.
+
+Copyright (C) 2019 Elco Koks. All versions released under the GNU Affero General Public License v3.0 license.
 """
 import os
 import numpy
@@ -21,9 +22,9 @@ from rasterio.features import shapes
 from shapely.geometry import MultiLineString
 import country_converter as coco
 
-def create_hzd_df_fl_single(flood_scen,region,geometry,country_ISO3,hzd='FU'):
+def single_polygonized(flood_scen,region,geometry,country_ISO3,hzd='FU'):
     """
-    Function to overlay a inland flood hazard maps with the infrastructure assets
+    Function to overlay a surface or river flood hazard map with the infrastructure assets. 
     
     Arguments:
         *flood_scen* : Unique ID for the flood scenario to be used.
@@ -83,7 +84,7 @@ def create_hzd_df_fl_single(flood_scen,region,geometry,country_ISO3,hzd='FU'):
     
     return gdf
 
-def create_hzd_df(region,geometry,hzd_list,hzd_names):
+def multiple_polygonized(region,geometry,hzd_list,hzd_names):
     """
     Function to overlay a set of hazard maps with infrastructure assets. This function 
     is used for Earthquakes, Coastal floods and Cyclones (the hazard maps with global coverage).
@@ -179,7 +180,7 @@ def intersect_hazard(x,hzd_reg_sindex,hzd_region,liquefaction=False):
         return x.geometry,0
 
 
-def fetch_hazard_values(n,hzd,rail=False):
+def region_intersection(n,hzd,rail=False):
     """
     Function to intersect all return periods of a particualar hazard with all 
     road or railway assets in the specific region. 
@@ -264,14 +265,14 @@ def fetch_hazard_values(n,hzd,rail=False):
             hazard_path = os.path.join(hazard_path,hzd_name_dir,'Global')
             hzd_list = [os.path.join(hazard_path,x) for x in os.listdir(hazard_path)]
             try:
-                hzds_data = create_hzd_df(region,x.geometry,hzd_list,hzd_names)
+                hzds_data = multiple_polygonized(region,x.geometry,hzd_list,hzd_names)
             except:
                 hzds_data = pandas.DataFrame(columns=['hazard'])
 
         for iter_,hzd_name in enumerate(hzd_names):
             if (hzd == 'PU') | (hzd == 'FU'):
                 try:
-                    hzds_data = create_hzd_df_fl_single(hzd_name,region,x.geometry,x.ISO_3digit,hzd)
+                    hzds_data = single_polygonized(hzd_name,region,x.geometry,x.ISO_3digit,hzd)
                     hzd_region = hzds_data.loc[hzds_data.hazard == hzd_name]
                     hzd_region.reset_index(inplace=True,drop=True)
                 except:
@@ -442,105 +443,110 @@ def get_tree_density(x,rail=False):
 
     except:
         print('{} failed!'.format(x[3]))
-	
 
-def region_bridges(x):
-    region = x[3]
-    try:
-        data_path = load_config()['paths']['data']
-            
-        bridges_osm = bridges(data_path,region,regional=True)
-
-        bridges_osm['length'] = bridges_osm.geometry.apply(line_length)
-        bridges_osm['length'] = bridges_osm['length']*1000
-        road_dict = map_roads()
-        bridges_osm['road_type'] = bridges_osm.road_type.apply(lambda y: road_dict[y])        
-        bridges_osm['region'] = region
-        bridges_osm['country'] = region[:3]        
-        
-        bridges_osm.to_csv(os.path.join(data_path,'bridges_osm','{}.csv'.format(region)))
-        
-        print('{} finished!'.format(region))
-        
-        return bridges_osm
-    
-    except Exception as e:
-        print('Failed to finish {} because of {}!'.format(region,e))
-
-
-def get_all_bridges():
-    data_path = load_config()['paths']['data']
-
-    global_regions = geopandas.read_file(os.path.join(data_path,'input_data','global_regions_v2.shp'))
-    global_regions = global_regions.loc[(global_regions.GID_2.isin([(x.split('.')[0]) for x in os.listdir(os.path.join(data_path,'region_osm'))]))]
-
-    with Pool(40) as pool:
-        collect_bridges = pool.map(region_bridges,list(global_regions.to_records()),chunksize=1) 
-
-    all_bridges = pandas.concat(collect_bridges)
-    all_bridges.reset_index(inplace=True,drop=True)
-    all_bridges.to_csv(os.path.join(data_path,'output_data','osm_bridges.csv'))
-
-    
-def get_all_regions(hzd,from_=0,to_=46433):
+def bridge_intersection(file,rail=False):
     """
-    Function to run intersection for all regions parallel.
-    """    
-    road = True
-    railway = False
+    Function to obtain all bridge intersection values from the regional intersection data.
     
-    hzds = [hzd]*int(to_)
-    Roads = [road]*int(to_)
-    Railways = [railway]*int(to_)
-
+    To be able to do this, we require all other hazard intersection files to be finished.
+    
+    Arguments:
+        *file* : file with all unique road bridges in a region.
+        
+    Returns:
+        *.feather file* : a geopandas GeoDataframe, saved as .feather file with all intersection values. 
+    
+    """
     data_path = load_config()['paths']['data']
+    
+    if not rail:
+        all_EQ_files = [os.path.join(data_path,'output_EQ_full',x) for x in os.listdir(os.path.join(data_path,'output_EQ_full'))]
+        all_Cyc_files = [os.path.join(data_path,'output_Cyc_full',x) for x in os.listdir(os.path.join(data_path,'output_Cyc_full'))]
+        all_PU_files = [os.path.join(data_path,'output_PU_full',x) for x in os.listdir(os.path.join(data_path,'output_PU_full'))]
+        all_FU_files = [os.path.join(data_path,'output_FU_full',x) for x in os.listdir(os.path.join(data_path,'output_FU_full'))]
+        all_CF_files = [os.path.join(data_path,'output_FU_full',x) for x in os.listdir(os.path.join(data_path,'output_FU_full'))]
 
-    global_regions = geopandas.read_file(os.path.join(data_path,'input_data','global_regions_v2.shp'))
-    global_regions = global_regions.loc[global_regions.GID_2.isin([(x.split('.')[0]) for x in os.listdir(os.path.join(data_path,'region_osm'))])]
-
-    if road:
-        global_regions = global_regions.loc[(global_regions.GID_2.isin([x[:-10] for x in os.listdir(os.path.join(data_path,'road_stats'))]))]
-        global_regions = global_regions.loc[~(global_regions.GID_2.isin(['_'.join((x.split('.')[0]).split('_')[:4]) for x in os.listdir(os.path.join(data_path,'output_{}_full'.format(hzd)))]))]
     else:
-        global_regions = global_regions.loc[(global_regions.GID_2.isin([x[:-10] for x in os.listdir(os.path.join(data_path,'railway_stats'))]))]
-        global_regions = global_regions.loc[~(global_regions.GID_2.isin(['_'.join((x.split('.')[0]).split('_')[:4]) for x in os.listdir(os.path.join(data_path,'output_{}_rail_full'.format(hzd)))]))]
+        all_EQ_files = [os.path.join(data_path,'output_EQ_rail_full',x) for x in os.listdir(os.path.join(data_path,'output_EQ_rail_full'))]
+        all_Cyc_files = [os.path.join(data_path,'output_Cyc_rail_full',x) for x in os.listdir(os.path.join(data_path,'output_Cyc_rail_full'))]
+        all_PU_files = [os.path.join(data_path,'output_PU_rail_full',x) for x in os.listdir(os.path.join(data_path,'output_PU_rail_full'))]
+        all_FU_files = [os.path.join(data_path,'output_FU_rail_full',x) for x in os.listdir(os.path.join(data_path,'output_FU_rail_full'))]        
+        all_CF_files = [os.path.join(data_path,'output_CF_rail_full',x) for x in os.listdir(os.path.join(data_path,'output_CF_rail_full'))]
+        
+    df_bridge = pandas.read_csv(file,index_col=[0])
+    df_bridge['osm_id'] = df_bridge.osm_id.astype(str)
 
-    regions = list(global_regions.index)[::-1]
-    print(len(regions))
+    df_EQ = pandas.read_feather([x for x in all_EQ_files if os.path.split(file)[1][:-6] in x][0])
+    df_EQ['osm_id'] = df_EQ.osm_id.astype(str)
 
-    with Pool(40) as pool: 
-        pool.starmap(fetch_hazard_values,zip(regions,hzds,Roads,Railways),chunksize=1) 
- 
-       
-def get_all_tree_values():
-    """
-    Function to run intersection for all regions parallel.
-    """
-    data_path = load_config()['paths']['data']
+    df_Cyc = pandas.read_feather([x for x in all_Cyc_files if os.path.split(file)[1][:-6] in x][0])
+    df_Cyc['osm_id'] = df_Cyc.osm_id.astype(str)
 
-    global_regions = geopandas.read_file(os.path.join(data_path,'input_data','global_regions_v2.shp'))
-    global_regions = global_regions.loc[~(global_regions.GID_2.isin([(x.split('.')[0]) for x in os.listdir(os.path.join(data_path,'tree_cover_rail'))]))]
-    global_regions = global_regions.loc[(global_regions.GID_2.isin([x[:-10] for x in os.listdir(os.path.join(data_path,'railway_stats'))]))]
+    df_PU = pandas.read_feather([x for x in all_PU_files if os.path.split(file)[1][:-6] in x][0])
+    df_PU['osm_id'] = df_PU.osm_id.astype(str)
 
+    df_FU = pandas.read_feather([x for x in all_FU_files if os.path.split(file)[1][:-6] in x][0])
+    df_FU['osm_id'] = df_FU.osm_id.astype(str)
 
-    with Pool(40) as pool:
-        pool.map(get_tree_density,list(global_regions.to_records()),chunksize=1) 
+    df_CF = pandas.read_feather([x for x in all_CF_files if os.path.split(file)[1][:-6] in x][0])
+    df_CF['osm_id'] = df_CF.osm_id.astype(str)
+    
+    if len(df_bridge.loc[df_bridge.osm_id.isin(list(df_EQ.osm_id))]) == 0:
+        df_output = pandas.DataFrame(columns=list(df_EQ[[x for x in list(df_EQ.columns) if ('val' in x) | ('length_' in x)]].columns),index=df_bridge.index).fillna(0)
+        df_bridge = pandas.concat([df_bridge,df_output],axis=1)
+    else:
+        region_bridges = df_bridge.loc[df_bridge.osm_id.isin(list(df_EQ.osm_id))]
+        df_reg_bridges = df_EQ.loc[df_EQ.osm_id.isin([str(x) for x in list(region_bridges.osm_id)])]   
+        df_bridge = df_bridge.merge(df_reg_bridges[[x for x in list(df_EQ.columns) 
+                                        if ('val' in x) | ('length_' in x)]+['osm_id']],
+                        left_on='osm_id',right_on='osm_id',how='left')
 
+    if len(df_bridge.loc[df_bridge.osm_id.isin(list(df_Cyc.osm_id))]) == 0:
+        df_output = pandas.DataFrame(columns=list(df_Cyc[[x for x in list(df_Cyc.columns) if ('val' in x) | ('length_' in x)]].columns),index=df_bridge.index).fillna(0)
+        df_bridge = pandas.concat([df_bridge,df_output],axis=1)
+    else:
+        region_bridges = df_bridge.loc[df_bridge.osm_id.isin(list(df_Cyc.osm_id))]
+        df_reg_bridges = df_Cyc.loc[df_Cyc.osm_id.isin([str(x) for x in list(region_bridges.osm_id)])]   
+        df_bridge = df_bridge.merge(df_reg_bridges[[x for x in list(df_Cyc.columns) 
+                                        if ('val' in x) | ('length_' in x)]+['osm_id']],
+                        left_on='osm_id',right_on='osm_id',how='left')
 
-def get_all_liquefaction_overlays():
-    """
-    Function to run intersection for all regions parallel.
-    """
-    data_path = load_config()['paths']['data']
+    if len(df_bridge.loc[df_bridge.osm_id.isin(list(df_FU.osm_id))]) == 0:
+        df_output = pandas.DataFrame(columns=list(df_FU[[x for x in list(df_FU.columns) if ('val' in x) | ('length_' in x)]].columns),index=df_bridge.index).fillna(0)
+        df_bridge = pandas.concat([df_bridge,df_output],axis=1)
+    else:
+        region_bridges = df_bridge.loc[df_bridge.osm_id.isin(list(df_FU.osm_id))]
+        df_reg_bridges = df_FU.loc[df_FU.osm_id.isin([str(x) for x in list(region_bridges.osm_id)])]   
+        df_bridge = df_bridge.merge(df_reg_bridges[[x for x in list(df_FU.columns) 
+                                        if ('val' in x) | ('length_' in x)]+['osm_id']],
+                        left_on='osm_id',right_on='osm_id',how='left')
 
-    global_regions = geopandas.read_file(os.path.join(data_path,'input_data','global_regions_v2.shp'))
-    global_regions = global_regions.loc[(global_regions.GID_2.isin([(x.split('.')[0]) for x in os.listdir(os.path.join(data_path,'region_osm'))]))]
-    global_regions = global_regions.loc[~(global_regions.GID_2.isin([(x.split('.')[0][:-4]) for x in os.listdir(os.path.join(data_path,'liquefaction_road'))]))]
+    if len(df_bridge.loc[df_bridge.osm_id.isin(list(df_PU.osm_id))]) == 0:
+        df_output = pandas.DataFrame(columns=list(df_PU[[x for x in list(df_PU.columns) if ('val' in x) | ('length_' in x)]].columns),index=df_bridge.index).fillna(0)
+        df_bridge = pandas.concat([df_bridge,df_output],axis=1)
+    else:
+        region_bridges = df_bridge.loc[df_bridge.osm_id.isin(list(df_PU.osm_id))]
+        df_reg_bridges = df_PU.loc[df_PU.osm_id.isin([str(x) for x in list(region_bridges.osm_id)])]   
+        df_bridge = df_bridge.merge(df_reg_bridges[[x for x in list(df_PU.columns) 
+                                        if ('val' in x) | ('length_' in x)]+['osm_id']],
+                        left_on='osm_id',right_on='osm_id',how='left')
 
-    global_regions['Size'] = global_regions.area
-    global_regions = global_regions.sort_values(by='Size')
-    global_regions.drop(['Size'],inplace=True,axis=1)
+    if len(df_bridge.loc[df_bridge.osm_id.isin(list(df_CF.osm_id))]) == 0:
+        df_output = pandas.DataFrame(columns=list(df_CF[[x for x in list(df_CF.columns) if ('val' in x) | ('length_' in x)]].columns),index=df_bridge.index).fillna(0)
+        df_bridge = pandas.concat([df_bridge,df_output],axis=1)
+    else:
+        region_bridges = df_bridge.loc[df_bridge.osm_id.isin(list(df_CF.osm_id))]
+        df_reg_bridges = df_CF.loc[df_CF.osm_id.isin([str(x) for x in list(region_bridges.osm_id)])]   
+        df_bridge = df_bridge.merge(df_reg_bridges[[x for x in list(df_CF.columns) 
+                                        if ('val' in x) | ('length_' in x)]+['osm_id']],
+                        left_on='osm_id',right_on='osm_id',how='left')
+        
+    df_bridge.drop('geometry',inplace=True,axis=1)
+    
+    if not rail:
+        df_bridge.to_feather(os.path.join(data_path,'bridges_osm_roads','{}.ft'.format(list(df_bridge.region.unique())[0])))
+    else:
+        df_bridge.to_feather(os.path.join(data_path,'bridges_osm_rail','{}.ft'.format(list(df_bridge.region.unique())[0])))
+        
 
-    with Pool(40) as pool:
-        pool.map(get_liquefaction_region,list(global_regions.to_records()),chunksize=1) 
         

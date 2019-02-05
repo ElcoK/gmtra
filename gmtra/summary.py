@@ -1,5 +1,13 @@
+"""
+Source code for Global Multihazard Transport Risk Analysis (GMTRA)
+
+Functions to create summary statistics of the infrastructure data.
+
+Copyright (C) 2019 Elco Koks. All versions released under the GNU Affero General Public License v3.0 license.
+"""
+
 import os
-import sys
+import tqdm
 import geopandas as gpd
 import pandas as pd
 from pathos.multiprocessing import Pool,cpu_count
@@ -7,6 +15,106 @@ from pathos.multiprocessing import Pool,cpu_count
 from gmtra.utils import load_config,line_length,map_roads
 from gmtra.fetch import roads,railway
 data_path = load_config()['paths']['data']
+
+
+def all_outputs():
+    
+    data_path = load_config()['paths']['data']
+
+    # Fluvial Flooding
+    get_files = os.listdir(os.path.join(data_path,'FU_impacts'))
+    with Pool(40) as pool: 
+        tot_road_FU = list(tqdm(pool.imap(load_FU_csv,get_files), total=len(get_files)))
+    pd.concat(tot_road_FU,sort=True).reset_index(drop=True).to_csv(os.path.join(data_path,'summarized','FU_road_losses.csv'))        
+    
+    get_files = os.listdir(os.path.join(data_path,'FU_impacts_rail'))
+    with Pool(40) as pool: 
+        tot_road_FU = list(tqdm(pool.imap(load_FU_csv_rail,get_files), total=len(get_files)))
+    pd.concat(tot_road_FU,sort=True).reset_index(drop=True).to_csv(os.path.join(data_path,'summarized','FU_rail_losses.csv'))        
+    
+    # Pluvial Flooding
+    get_files = os.listdir(os.path.join(data_path,'PU_impacts'))
+    with Pool(40) as pool: 
+        tot_road_PU = list(tqdm(pool.imap(load_PU_csv,get_files), total=len(get_files)))
+    pd.concat(tot_road_PU,sort=True).reset_index(drop=True).to_csv(os.path.join(data_path,'summarized','PU_road_losses.csv'))        
+
+    get_files = os.listdir(os.path.join(data_path,'PU_impacts_rail'))
+    with Pool(40) as pool: 
+        tot_road_PU = list(tqdm(pool.imap(load_PU_csv_rail,get_files), total=len(get_files)))
+    pd.concat(tot_road_PU,sort=True).reset_index(drop=True).to_csv(os.path.join(data_path,'summarized','PU_rail_losses.csv'))        
+
+    # Earthquakes
+    get_files = os.listdir(os.path.join(data_path,'EQ_impacts'))
+    with Pool(40) as pool: 
+        tot_road_EQ = list(tqdm(pool.imap(load_EQ_csv,get_files), total=len(get_files)))
+    pd.concat(tot_road_EQ,sort=True).reset_index(drop=True).to_csv(os.path.join(data_path,'summarized','EQ_road_losses.csv'))        
+
+    get_files = os.listdir(os.path.join(data_path,'EQ_impacts_rail'))
+    with Pool(40) as pool: 
+        tot_road_EQ = list(tqdm(pool.imap(load_EQ_csv_rail,get_files), total=len(get_files)))
+    pd.concat(tot_road_EQ,sort=True).reset_index(drop=True).to_csv(os.path.join(data_path,'summarized','EQ_rail_losses.csv'))        
+
+   # Coastal Flooding
+    get_files = os.listdir(os.path.join(data_path,'CF_impacts'))
+    with Pool(40) as pool: 
+        tot_road_CF = list(tqdm(pool.imap(load_CF_csv,get_files), total=len(get_files)))
+    pd.concat(tot_road_CF,sort=True).reset_index(drop=True).to_csv(os.path.join(data_path,'summarized','CF_road_losses.csv'))        
+
+    get_files = os.listdir(os.path.join(data_path,'CF_impacts_rail'))
+    with Pool(40) as pool: 
+        tot_road_CF = list(tqdm(pool.imap(load_CF_csv_rail,get_files), total=len(get_files)))
+    pd.concat(tot_road_CF,sort=True).reset_index(drop=True).to_csv(os.path.join(data_path,'summarized','CF_rail_losses.csv'))        
+
+    # Coastal Flooding
+    get_files = os.listdir(os.path.join(data_path,'Cyc_impacts'))
+    with Pool(40) as pool: 
+        tot_road_Cyc = list(tqdm(pool.imap(load_Cyc_csv,get_files), total=len(get_files)))
+    pd.concat(tot_road_Cyc,sort=True).reset_index(drop=True).to_csv(os.path.join(data_path,'summarized','Cyc_road_losses.csv'))        
+
+    get_files = os.listdir(os.path.join(data_path,'Cyc_impacts_rail'))
+    with Pool(40) as pool: 
+        tot_road_Cyc = list(tqdm(pool.imap(load_Cyc_csv_rail,get_files), total=len(get_files)))
+    pd.concat(tot_road_Cyc,sort=True).reset_index(drop=True).to_csv(os.path.join(data_path,'summarized','Cyc_rail_losses.csv'))        
+ 
+
+    # Fluvial
+    get_files = os.listdir(os.path.join(data_path,'FU_sensitivity'))
+    with Pool(40) as pool: 
+        tot_road_EQ = list(tqdm(pool.imap(load_FU_csv_sens,get_files), total=len(get_files)))
+    pd.concat(tot_road_EQ,sort=True).reset_index(drop=True).to_csv(os.path.join(data_path,'summarized','sa_FU_road_losses.csv'))    #
+    # Pluvial
+    get_files = os.listdir(os.path.join(data_path,'PU_sensitivity'))
+    with Pool(40) as pool: 
+        tot_road_EQ = list(tqdm(pool.imap(load_PU_csv_sens,get_files), total=len(get_files)))
+    pd.concat(tot_road_EQ,sort=True).reset_index(drop=True).to_csv(os.path.join(data_path,'summarized','sa_PU_road_losses.csv'))    #
+    # Coastal
+    get_files = os.listdir(os.path.join(data_path,'CF_sensitivity'))
+    with Pool(40) as pool: 
+        tot_road_EQ = list(tqdm(pool.imap(load_CF_csv_sens,get_files), total=len(get_files)))
+    pd.concat(tot_road_EQ,sort=True).reset_index(drop=True).to_csv(os.path.join(data_path,'summarized','sa_CF_road_losses.csv'))    #
+    # Earthquakes
+    get_files = os.listdir(os.path.join(data_path,'EQ_sensitivity'))
+    with Pool(40) as pool: 
+        tot_road_EQ = list(tqdm(pool.imap(load_EQ_csv_sens,get_files), total=len(get_files)))
+    pd.concat(tot_road_EQ,sort=True).reset_index(drop=True).to_csv(os.path.join(data_path,'summarized','sa_EQ_road_losses.csv'))    #
+    # Cyclones
+    get_files = os.listdir(os.path.join(data_path,'Cyc_sensitivity'))
+    with Pool(40) as pool: 
+        tot_road_Cyc = list(tqdm(pool.imap(load_Cyc_csv_sens,get_files), total=len(get_files)))
+    pd.concat(tot_road_Cyc,sort=True).reset_index(drop=True).to_csv(os.path.join(data_path,'summarized','sa_Cyc_road_losses.csv'))    #
+    
+    
+    # Bridges
+    get_files = os.listdir(os.path.join(data_path,'bridge_rail_risk'))
+    with Pool(40) as pool: 
+        tot_bridges = list(tqdm(pool.imap(load_bridge_rail_csv,get_files), total=len(get_files)))
+    pd.concat(tot_bridges,sort=True).reset_index(drop=True).to_csv(os.path.join(data_path,'summarized','bridge_rail_risk_.csv'))        
+    
+#    # Bridges
+    get_files = os.listdir(os.path.join(data_path,'bridge_road_risk'))
+    with Pool(40) as pool: 
+        tot_bridges = list(tqdm(pool.imap(load_bridge_road_csv,get_files), total=len(get_files)))
+    pd.concat(tot_bridges,sort=True).reset_index(drop=True).to_csv(os.path.join(data_path,'summarized','bridges_road_risk_.csv'))        
 
 def get_region_road_stats(x):
     try:
@@ -91,3 +199,53 @@ def all_region_stats():
     with Pool(cpu_count()-1) as pool: 
         pool.map(get_region_road_stats,list(global_data.to_records()),chunksize=1) 
 
+def load_FU_csv(x):
+    return pd.read_csv(os.path.join(data_path,'FU_impacts',x)) 
+
+def load_FU_csv_rail(x):
+    return pd.read_csv(os.path.join(data_path,'FU_impacts_rail',x)) 
+
+def load_FU_csv_sens(x):
+    return pd.read_csv(os.path.join(data_path,'FU_sensitivity',x)) 
+
+def load_CF_csv(x):
+    return pd.read_csv(os.path.join(data_path,'CF_impacts',x))
+
+def load_CF_csv_rail(x):
+    return pd.read_csv(os.path.join(data_path,'CF_impacts_rail',x))
+
+def load_CF_csv_sens(x):
+    return pd.read_csv(os.path.join(data_path,'CF_sensitivity',x)) 
+
+def load_PU_csv(x):
+    return pd.read_csv(os.path.join(data_path,'PU_impacts',x))
+
+def load_PU_csv_rail(x):
+    return pd.read_csv(os.path.join(data_path,'PU_impacts_rail',x))
+
+def load_PU_csv_sens(x):
+    return pd.read_csv(os.path.join(data_path,'PU_sensitivity',x)) 
+
+def load_EQ_csv(x):
+    return pd.read_csv(os.path.join(data_path,'EQ_impacts',x))
+
+def load_EQ_csv_rail(x):
+    return pd.read_csv(os.path.join(data_path,'EQ_impacts_rail',x))
+
+def load_EQ_csv_sens(x):
+    return pd.read_csv(os.path.join(data_path,'EQ_sensitivity',x)) 
+
+def load_Cyc_csv(x):
+    return pd.read_csv(os.path.join(data_path,'Cyc_impacts',x))
+
+def load_Cyc_csv_rail(x):
+    return pd.read_csv(os.path.join(data_path,'Cyc_impacts_rail',x))
+
+def load_Cyc_csv_sens(x):
+    return pd.read_csv(os.path.join(data_path,'Cyc_sensitivity',x))
+
+def load_bridge_rail_csv(file):
+    return pd.read_csv(os.path.join(data_path,'bridge_rail_risk',file))
+
+def load_bridge_road_csv(file):
+    return pd.read_csv(os.path.join(data_path,'bridge_road_risk',file))

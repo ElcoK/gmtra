@@ -1,8 +1,7 @@
 
-=======================
-Preprocessing functions
-=======================
-
+==========================
+3. Preprocessing functions
+==========================
 
 Download planet OSM
 -------------------
@@ -39,3 +38,7 @@ Merge SSBN maps within a country
 Merge SSBN maps for all countries
 ------------------------------------------------
 .. autofunction:: gmtra.preprocessing.run_SSBN_merge
+
+Extract bridges from OpenStreetMap
+------------------------------------------------
+.. autofunction:: gmtra.preprocessing.region_bridges
