@@ -13,7 +13,6 @@ import geopandas
 pandas.options.mode.chained_assignment = None
 
 from gmtra.utils import load_config,total_length_risk,exposed_length_risk
-data_path = load_config()['paths']['data']
 
 from pathos.multiprocessing import Pool,cpu_count
 pandas.set_option('chained_assignment',None)

@@ -14,7 +14,6 @@ from pathos.multiprocessing import Pool,cpu_count
 
 from gmtra.utils import load_config,line_length,map_roads
 from gmtra.fetch import roads,railway
-data_path = load_config()['paths']['data']
 
 
 def all_outputs():
@@ -200,52 +199,69 @@ def all_region_stats():
         pool.map(get_region_road_stats,list(global_data.to_records()),chunksize=1) 
 
 def load_FU_csv(x):
+    data_path = load_config()['paths']['data']
     return pd.read_csv(os.path.join(data_path,'FU_impacts',x)) 
 
 def load_FU_csv_rail(x):
+    data_path = load_config()['paths']['data']
     return pd.read_csv(os.path.join(data_path,'FU_impacts_rail',x)) 
 
 def load_FU_csv_sens(x):
+    data_path = load_config()['paths']['data']
     return pd.read_csv(os.path.join(data_path,'FU_sensitivity',x)) 
 
 def load_CF_csv(x):
+    data_path = load_config()['paths']['data']
     return pd.read_csv(os.path.join(data_path,'CF_impacts',x))
 
 def load_CF_csv_rail(x):
+    data_path = load_config()['paths']['data']
     return pd.read_csv(os.path.join(data_path,'CF_impacts_rail',x))
 
 def load_CF_csv_sens(x):
+    data_path = load_config()['paths']['data']
     return pd.read_csv(os.path.join(data_path,'CF_sensitivity',x)) 
 
 def load_PU_csv(x):
+    data_path = load_config()['paths']['data']
     return pd.read_csv(os.path.join(data_path,'PU_impacts',x))
 
 def load_PU_csv_rail(x):
+    data_path = load_config()['paths']['data']
     return pd.read_csv(os.path.join(data_path,'PU_impacts_rail',x))
 
 def load_PU_csv_sens(x):
+    data_path = load_config()['paths']['data']
     return pd.read_csv(os.path.join(data_path,'PU_sensitivity',x)) 
 
 def load_EQ_csv(x):
+    data_path = load_config()['paths']['data']
     return pd.read_csv(os.path.join(data_path,'EQ_impacts',x))
 
 def load_EQ_csv_rail(x):
+    data_path = load_config()['paths']['data']
     return pd.read_csv(os.path.join(data_path,'EQ_impacts_rail',x))
 
 def load_EQ_csv_sens(x):
+    data_path = load_config()['paths']['data']
     return pd.read_csv(os.path.join(data_path,'EQ_sensitivity',x)) 
 
 def load_Cyc_csv(x):
+    data_path = load_config()['paths']['data']
     return pd.read_csv(os.path.join(data_path,'Cyc_impacts',x))
 
 def load_Cyc_csv_rail(x):
+    data_path = load_config()['paths']['data']
     return pd.read_csv(os.path.join(data_path,'Cyc_impacts_rail',x))
 
 def load_Cyc_csv_sens(x):
+    data_path = load_config()['paths']['data']
     return pd.read_csv(os.path.join(data_path,'Cyc_sensitivity',x))
 
 def load_bridge_rail_csv(file):
+    data_path = load_config()['paths']['data']
     return pd.read_csv(os.path.join(data_path,'bridge_rail_risk',file))
 
 def load_bridge_road_csv(file):
+    data_path = load_config()['paths']['data']
     return pd.read_csv(os.path.join(data_path,'bridge_road_risk',file))
