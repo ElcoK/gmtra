@@ -1,3 +1,5 @@
+[![Documentation Status](https://readthedocs.org/projects/gmtra/badge/?version=latest)](https://gmtra.readthedocs.io/en/latest/?badge=latest)
+
 ![ITRC](https://www.itrc.org.uk/wp-content/themes/itrc-mistral/images/ITRC-mistral.png)
 
 # Global Multihazard Transport Risk Analysis (GMTRA)
