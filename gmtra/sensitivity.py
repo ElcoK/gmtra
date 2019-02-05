@@ -11,14 +11,131 @@ import numpy
 import tqdm
 from scipy import integrate
 
-from utils import sum_tuples
-from losses import road_flood,rail_flood,road_cyclone,rail_cyclone,road_earthquake,rail_earthquake
+from utils import sum_tuples,square_m2_cost_range,monetary_risk
+from losses import road_flood,rail_flood,road_cyclone,rail_cyclone,road_earthquake,rail_earthquake,road_bridge_earthquake,road_bridge_flood_cyclone,rail_bridge_earthquake,rail_bridge_flood_cyclone
+    
+def regional_bridge_risk(file,data_path,param_values,income_lookup,eq_curve,design_tables,depth_threshs,wind_threshs,rail=False):
+    """
+    Function to estimate the summary statistics of all bridge damages in a region
+    
+    Arguments:
+        *file* : path to the .feather file with all bridges of a region.
+        *data_path* : file path to location of all data.
+        *param_values* : A NumPy Array with sets of parameter values we would like to test.       
+        *income_lookup* : A dictionary that relates a country ID (ISO3 code) with its World Bank income goup.
+        *eq_curve* : A pandas DataFrame with unique damage curves for earthquake damages.
+        *design_table* : A NumPy array that represents the design standards for different bridge types, dependent on road type.
+        *depth_thresh* : A list with failure depth thresholds. 
+        *wind_threshs* :  A list with failure wind gustspeed thresholds. 
+        
+    Optional Arguments:
+        *rail* : Default is **False**. Set to **True** if you would like to 
+        intersect the railway assets in a region.
+        
+    Returns:
+        *DataFrame* : a pandas DataFrame with summary damage statistics for the loaded region.
+        
+    """    
+   
+    df = pandas.read_feather(file)
 
-def calc_risk_total(x,hazard,RPS,events):
-    collect_risks = []
-    for y in range(50):
-        collect_risks.append(integrate.simps([x[y] for x in x[events]][::-1], x=RPS[::-1]))
-    return collect_risks
+    df = df.loc[~(df.length < 6)]
+    if not rail:
+        df = df.loc[~(df['road_type'] == 'nodata')]
+    else:
+        df = df.loc[~(df['rail_type'] == 'nodata')]
+        
+    df['cost'] = df.apply(lambda x: square_m2_cost_range(x),axis=1)
+    df.drop([x for x in list(df.columns) if 'length_' in x],axis=1,inplace=True)
+    vals_EQ = [x for x in list(df.columns) if 'val_EQ' in x]
+
+    df['IncomeGroup'] = income_lookup[list(df.country.unique())[0]]
+    region = list(df.region.unique())[0]
+
+    df = df.rename({'val_Cyc_rp100':'val_Cyc_rp500',
+                    'val_Cyc_rp500':'val_Cyc_rp1000', 
+                    'val_Cyc_rp1000':'val_Cyc_rp100',
+                    'length_Cyc_rp100':'length_Cyc_rp500',
+                    'length_Cyc_rp500':'length_Cyc_rp1000', 
+                    'length_Cyc_rp1000':'length_Cyc_rp100',
+                    'val_EQ_rp250':'val_EQ_rp475',
+                    'val_EQ_rp475':'val_EQ_rp1500', 
+                    'val_EQ_rp975':'val_EQ_rp250',
+                    'val_EQ_rp1500':'val_EQ_rp2475', 
+                    'val_EQ_rp2475':'val_EQ_rp975',
+                    'length_EQ_rp250':'length_EQ_rp475',
+                    'length_EQ_rp475':'length_EQ_rp1500',
+                    'length_EQ_rp975':'length_EQ_rp250',
+                    'length_EQ_rp1500':'length_EQ_rp2475',
+                    'length_EQ_rp2475':'length_EQ_rp975'}, axis='columns')
+    try:    
+        all_rps = [1/250,1/475,1/975,1/1500,1/2475]
+        events = ['EQ_rp250','EQ_rp475','EQ_rp975','EQ_rp1500','EQ_rp2475']
+        tqdm.pandas('Earthquake '+region)
+        if not rail:
+            df['EQ_risk'] = df.progress_apply(lambda x: road_bridge_earthquake(x,eq_curve,param_values,vals_EQ,events,all_rps,sensitivity=True),axis=1)
+        else:
+            df['EQ_risk'] = df.progress_apply(lambda x: rail_bridge_earthquake(x,eq_curve,param_values,vals_EQ,events,all_rps,sensitivity=True),axis=1)
+            
+    except:
+        df['EQ_risk'] = [[(0,0)]*50]*len(df)   
+        
+    if df['IncomeGroup'].unique()[0] == 'HIC':
+        design_table = design_tables[0]
+    elif df['IncomeGroup'].unique()[0] == 'UMC':
+        design_table = design_tables[1]
+    else:
+        design_table = design_tables[2]
+
+    try:
+        all_rps = [1/5,1/10,1/20,1/50,1/75,1/100,1/200,1/250,1/500,1/1000]
+        events = ['FU-5', 'FU-10', 'FU-20', 'FU-50', 'FU-75', 'FU-100', 'FU-200', 'FU-250','FU-500', 'FU-1000']
+        tqdm.pandas(desc='Fluvial '+region)
+        if not rail:
+            df['FU_risk'] = df.progress_apply(lambda x: road_bridge_flood_cyclone(x,design_table,depth_threshs,param_values,events,all_rps,sensitivity=True),axis=1)
+        else:
+            df['FU_risk'] = df.progress_apply(lambda x: rail_bridge_flood_cyclone(x,design_table,depth_threshs,param_values,events,all_rps,sensitivity=True),axis=1)
+            
+    except:
+        df['FU_risk'] = [[(0,0)]*50]*len(df)
+ 
+    try:
+        events = ['PU-5', 'PU-10', 'PU-20', 'PU-50', 'PU-75', 'PU-100', 'PU-200', 'PU-250','PU-500','PU-1000']
+        tqdm.pandas(desc='Pluvial '+region)
+        if not rail:
+            df['PU_risk'] = df.progress_apply(lambda x: road_bridge_flood_cyclone(x,design_table,depth_threshs,param_values,events,all_rps,sensitivity=True),axis=1)
+        else:
+            df['PU_risk'] = df.progress_apply(lambda x: rail_bridge_flood_cyclone(x,design_table,depth_threshs,param_values,events,all_rps,sensitivity=True),axis=1) 
+    except:
+        df['PU_risk'] = [[(0,0)]*50]*len(df)      
+        
+    try:
+        all_rps = [1/10,1/20,1/50,1/100,1/200,1/500,1/1000]
+        events = ['CF-10', 'CF-20', 'CF-50', 'CF-100', 'CF-200', 'CF-500', 'CF-1000']
+        tqdm.pandas(desc='Coastal '+region)
+        if not rail:
+            df['CF_risk'] = df.progress_apply(lambda x: road_bridge_flood_cyclone(x,design_table,depth_threshs,param_values,events,all_rps,sensitivity=True),axis=1)
+        else:
+            df['CF_risk'] = df.progress_apply(lambda x: rail_bridge_flood_cyclone(x,design_table,depth_threshs,param_values,events,all_rps,sensitivity=True),axis=1) 
+    except:
+        df['CF_risk'] = [[(0,0)]*50]*len(df)
+        
+    try:
+        all_rps = [1/50,1/100,1/250,1/500,1/1000]
+        events = ['Cyc_rp50','Cyc_rp100','Cyc_rp250','Cyc_rp500','Cyc_rp1000']
+        tqdm.pandas(desc='Cyclones '+region)
+        if not rail:
+            df['Cyc_risk'] = df.progress_apply(lambda x: road_bridge_flood_cyclone(x,design_table,wind_threshs,param_values,events,all_rps,sensitivity=True),axis=1)
+        else:
+            df['Cyc_risk'] = df.progress_apply(lambda x: rail_bridge_flood_cyclone(x,design_table,wind_threshs,param_values,events,all_rps,sensitivity=True),axis=1) 
+    except:
+        df['Cyc_risk'] = [[(0,0)]*50]*len(df)
+            
+    if not rail:
+        return df.groupby(['road_type','region','country','IncomeGroup'])['EQ_risk','FU_risk','PU_risk','CF_risk','Cyc_risk'].agg(sum_tuples)
+    else:
+        return df.groupby(['rail_type','region','country','IncomeGroup'])['EQ_risk','FU_risk','PU_risk','CF_risk','Cyc_risk'].agg(sum_tuples)
+
 
 def regional_cyclone(cycfil,data_path,events,param_values,rail=False):
     """
@@ -69,9 +186,9 @@ def regional_cyclone(cycfil,data_path,events,param_values,rail=False):
         if not rail:
             df_cyc = df_cyc.progress_apply(lambda x: road_cyclone(x,events,param_values,sensitivity=True),axis=1)
         else:
-            df_cyc = df_cyc.progress_apply(lambda x: rail_cyclone(x,events,param_values),axis=1)
+            df_cyc = df_cyc.progress_apply(lambda x: rail_cyclone(x,events,param_values,sensitivity=True),axis=1)
 
-        df_cyc['risk'] = df_cyc.apply(lambda x: calc_risk_total(x,'Cyc',[1/50,1/100,1/250,1/500,1/1000],events),axis=1)
+        df_cyc['risk'] = df_cyc.apply(lambda x: sensitivity_risk(x,'Cyc',[1/50,1/100,1/250,1/500,1/1000],events),axis=1)
         df_cyc = df_cyc.drop([x for x in list(df_cyc.columns) if (x in events) | ('val_' in x) | ('length_' in x)],axis=1)    
         df_cyc.reset_index(inplace=True,drop=True)
 
@@ -164,6 +281,7 @@ def regional_earthquake(file,data_path,global_costs,paved_ratios,events,wbreg_lo
                 all_bridge_files = [os.path.join(data_path,'bridges_osm_road',x) for x in os.listdir(os.path.join(data_path,'bridges_osm_road'))]
             else:
                 all_bridge_files = [os.path.join(data_path,'bridges_osm_rail',x) for x in os.listdir(os.path.join(data_path,'bridges_osm_rail'))]
+                
             bridges = list(pandas.read_feather([x for x in all_bridge_files if os.path.split(file)[1][:-6] in x][0])['osm_id'])
             df = df.loc[~(df['osm_id'].isin(bridges))]
         except:
@@ -174,16 +292,17 @@ def regional_earthquake(file,data_path,global_costs,paved_ratios,events,wbreg_lo
     
         tqdm.pandas(desc = region)
         if not rail:
-            df = df.progress_apply(lambda x: road_earthquake(x,global_costs,paved_ratios,frag_tables,events,wbreg_lookup,param_values,val_cols),axis=1)
+            df = df.progress_apply(lambda x: road_earthquake(x,global_costs,paved_ratios,frag_tables,events,wbreg_lookup,param_values,val_cols,sensitivity=True),axis=1)
         else:
-            df = df.progress_apply(lambda x: rail_earthquake(x,frag_tables,events,param_values,val_cols),axis=1)
+            df = df.progress_apply(lambda x: rail_earthquake(x,frag_tables,events,param_values,val_cols,sensitivity=True),axis=1)
 
+        df['risk'] = df.apply(lambda x: monetary_risk(x,[1/250,1/475,1/975,1/1500,1/2475],events),axis=1)
+        
+        df = df.drop([x for x in list(df.columns) if (x in events) | ('val_' in x) | ('length_' in x)],axis=1)    
         df.reset_index(inplace=True,drop=True)
         
-        df.groupby(['road_type','country','continent','region'])[events].agg(sum_tuples).to_csv(os.path.join(data_path,'EQ_impacts','{}.csv'.format(region)))
+        df.to_csv(os.path.join(data_path,'EQ_sensitivity','{}.csv'.format(region)))
         
-        return df.groupby(['road_type','country','continent','region'])[events].agg(sum_tuples)
-
     except Exception as e:
         print('Failed to finish {} because of {}!'.format(file,e))
 
@@ -258,9 +377,9 @@ def regional_flood(file,data_path,global_costs,paved_ratios,flood_curve_paved,fl
                                                     curve,events,param_values,val_cols,wbreg_lookup,sensitivity=True),axis=1)         
     
         if (hazard == 'PU') | (hazard == 'FU'):
-            df['risk'] = df.apply(lambda x: calc_risk_total(x,hazard,[1/5,1/10,1/20,1/50,1/75,1/100,1/200,1/250,1/500,1/1000],events),axis=1)
+            df['risk'] = df.apply(lambda x: sensitivity_risk(x,hazard,[1/5,1/10,1/20,1/50,1/75,1/100,1/200,1/250,1/500,1/1000],events),axis=1)
         else:
-            df['risk'] = df.apply(lambda x: calc_risk_total(x,hazard,[1/10,1/20,1/50,1/100,1/200,1/500,1/1000],events),axis=1)
+            df['risk'] = df.apply(lambda x: sensitivity_risk(x,hazard,[1/10,1/20,1/50,1/100,1/200,1/500,1/1000],events),axis=1)
         
         df = df.drop([x for x in list(df.columns) if (x in events) | ('val_' in x) | ('length_' in x)],axis=1)    
         df.reset_index(inplace=True,drop=True)

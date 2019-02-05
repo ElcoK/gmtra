@@ -7,20 +7,16 @@ Created on Tue Nov 27 09:53:23 2018
 
 import os
 import re
-import geopandas
 import pandas
 import numpy
 
-from random import shuffle
-from pathos.multiprocessing import Pool,cpu_count
-from SALib.sample import morris
 from tqdm import tqdm
 
-from utils import load_config,square_m2_cost_range,monetary_risk,sum_tuples
+from utils import square_m2_cost_range,monetary_risk,sum_tuples,sensitivity_risk
 
 pandas.set_option('chained_assignment',None)
 
-def asset_bridge_flood_cyclone(x,design_table,depth_threshs,param_values,events,all_rps):
+def road_bridge_flood_cyclone(x,design_table,depth_threshs,param_values,events,all_rps,sensitivity=False):
     """
     Function to estimate the range of either flood or cyclone damages to an individual bridge asset.
     
@@ -31,6 +27,10 @@ def asset_bridge_flood_cyclone(x,design_table,depth_threshs,param_values,events,
         *param_values* : A NumPy Array with sets of parameter values we would like to test.
         *events* : A list with the unique hazard events in row **x**.
         *all_rps* : A list with all return periods for the hazard that is being considered.
+    
+    Optional Arguments:
+        *sensitivity* : Default is **False**. Set to **True** if you would like to 
+        return all damage values to be able to perform a sensitivity analysis.
   
     Returns:
         *list* : A list with the range of possible damages to the specified bridge, based on the parameter set.
@@ -59,13 +59,56 @@ def asset_bridge_flood_cyclone(x,design_table,depth_threshs,param_values,events,
             frag = numpy.array([0]*len(rps_not)+list((x[rps] > depth_thresh[2])*1))
             uncer_output.append((cost*x.length*param[0]*param[1]*4+cost*x.length*param[0]*(1-param[1])*2)*frag)           
     
-    return monetary_risk(all_rps,list(zip(numpy.percentile(numpy.asarray(uncer_output), 0,axis=0),numpy.percentile(numpy.asarray(uncer_output), 20,axis=0),
-                                            numpy.percentile(numpy.asarray(uncer_output), 40,axis=0),numpy.percentile(numpy.asarray(uncer_output), 50,axis=0),
-                                            numpy.percentile(numpy.asarray(uncer_output), 60,axis=0),numpy.percentile(numpy.asarray(uncer_output), 80,axis=0),
-                                            numpy.percentile(numpy.asarray(uncer_output), 100,axis=0))))
+    if not sensitivity:
+        return monetary_risk(all_rps,list(zip(numpy.percentile(numpy.asarray(uncer_output), 0,axis=0),numpy.percentile(numpy.asarray(uncer_output), 20,axis=0),
+                                                numpy.percentile(numpy.asarray(uncer_output), 40,axis=0),numpy.percentile(numpy.asarray(uncer_output), 50,axis=0),
+                                                numpy.percentile(numpy.asarray(uncer_output), 60,axis=0),numpy.percentile(numpy.asarray(uncer_output), 80,axis=0),
+                                                numpy.percentile(numpy.asarray(uncer_output), 100,axis=0))))
+    else:
+        return sensitivity_risk(all_rps,[tuple(x) for x in numpy.array(uncer_output).T])
 
 
-def asset_bridge_earthquake(x,eq_curve,param_values,vals_EQ,all_rps):
+def rail_bridge_flood_cyclone(x,design_table,depth_threshs,param_values,events,all_rps,sensitivity=False):
+    """
+    Function to estimate the range of either flood or cyclone damages to an individual bridge asset.
+    
+    Arguments:
+        *x* : row in geopandas GeoDataFrame that represents an individual asset.
+        *design_table* : A NumPy array that represents the design standards for different bridge types, dependent on road type.
+        *depth_thresh* : A list with failure thresholds. Either contains flood depths or gust speeds.
+        *param_values* : A NumPy Array with sets of parameter values we would like to test.
+        *events* : A list with the unique hazard events in row **x**.
+        *all_rps* : A list with all return periods for the hazard that is being considered.
+    
+    Optional Arguments:
+        *sensitivity* : Default is **False**. Set to **True** if you would like to 
+        return all damage values to be able to perform a sensitivity analysis.
+  
+    Returns:
+        *list* : A list with the range of possible damages to the specified bridge, based on the parameter set.
+        
+    """ 
+    
+    uncer_output = []
+    for param in param_values:
+        depth_thresh = depth_threshs[int(param[3]-1)]
+        cost = x.cost[0]+((x.cost[1]-x.cost[0])*param[2])
+        rps = ['val_'+z for z in events if 1/[int(z) for z in re.findall('\d+',z)][0] < design_table[0][0]]
+        rps_not = ['val_'+z for z in events if 1/[int(z) for z in re.findall('\d+',z)][0] >= design_table[0][0]]
+
+        frag = numpy.array([0]*len(rps_not)+list((x[rps] > depth_thresh[0])*1))
+        uncer_output.append((cost*x.length*param[0]*param[1]*2+cost*x.length*param[0]*(1-param[1])*1)*frag)
+
+    if not sensitivity:
+        return monetary_risk(all_rps,list(zip(numpy.percentile(numpy.asarray(uncer_output), 0,axis=0),numpy.percentile(numpy.asarray(uncer_output), 20,axis=0),
+                                                numpy.percentile(numpy.asarray(uncer_output), 40,axis=0),numpy.percentile(numpy.asarray(uncer_output), 50,axis=0),
+                                                numpy.percentile(numpy.asarray(uncer_output), 60,axis=0),numpy.percentile(numpy.asarray(uncer_output), 80,axis=0),
+                                                numpy.percentile(numpy.asarray(uncer_output), 100,axis=0))))
+    else:
+        return sensitivity_risk(all_rps,[tuple(x) for x in numpy.array(uncer_output).T])
+
+
+def road_bridge_earthquake(x,eq_curve,param_values,vals_EQ,all_rps,sensitivity=False):
     """
     Function to estimate the range of earthquake damages to an individual bridge asset.
 
@@ -75,7 +118,11 @@ def asset_bridge_earthquake(x,eq_curve,param_values,vals_EQ,all_rps):
         *param_values* : A NumPy Array with sets of parameter values we would like to test.
         *vals_EQ* : A list with the unique hazard events in row **x**.
         *all_rps* : A list with all return periods for the hazard that is being considered.
-  
+    
+    Optional Arguments:
+        *sensitivity* : Default is **False**. Set to **True** if you would like to 
+        return all damage values to be able to perform a sensitivity analysis.
+        
     Returns:
         *list* : A list with the range of possible damages to the specified bridge, based on the parameter set.
         
@@ -91,10 +138,49 @@ def asset_bridge_earthquake(x,eq_curve,param_values,vals_EQ,all_rps):
         else:
             uncer_output.append((cost*x.length*param[0]*param[2]*2+cost*x.length*param[0]*(1-param[2])*1)*frag)     
     
-    return monetary_risk(all_rps,list(zip(numpy.percentile(numpy.asarray(uncer_output), 0,axis=0),numpy.percentile(numpy.asarray(uncer_output), 20,axis=0),
-                                            numpy.percentile(numpy.asarray(uncer_output), 40,axis=0),numpy.percentile(numpy.asarray(uncer_output), 50,axis=0),
-                                            numpy.percentile(numpy.asarray(uncer_output), 60,axis=0),numpy.percentile(numpy.asarray(uncer_output), 80,axis=0),
-                                            numpy.percentile(numpy.asarray(uncer_output), 100,axis=0))))
+    if not sensitivity:
+        return monetary_risk(all_rps,list(zip(numpy.percentile(numpy.asarray(uncer_output), 0,axis=0),numpy.percentile(numpy.asarray(uncer_output), 20,axis=0),
+                                                numpy.percentile(numpy.asarray(uncer_output), 40,axis=0),numpy.percentile(numpy.asarray(uncer_output), 50,axis=0),
+                                                numpy.percentile(numpy.asarray(uncer_output), 60,axis=0),numpy.percentile(numpy.asarray(uncer_output), 80,axis=0),
+                                                numpy.percentile(numpy.asarray(uncer_output), 100,axis=0))))
+    else:
+        return sensitivity_risk(all_rps,[tuple(x) for x in numpy.array(uncer_output).T])
+
+
+def rail_bridge_earthquake(x,eq_curve,param_values,vals_EQ,events,all_rps,sensitivity=False):
+    """
+    Function to estimate the range of earthquake damages to an individual bridge asset.
+
+     Arguments:
+        *x* : A row in a geopandas GeoDataFrame that represents an individual asset.
+        *eq_curve* : A pandas DataFrame with unique damage curves for earthquake damages.
+        *param_values* : A NumPy Array with sets of parameter values we would like to test.
+        *vals_EQ* : A list with the unique hazard events in row **x**.
+        *all_rps* : A list with all return periods for the hazard that is being considered.
+    
+    Optional Arguments:
+        *sensitivity* : Default is **False**. Set to **True** if you would like to 
+        return all damage values to be able to perform a sensitivity analysis.
+        
+    Returns:
+        *list* : A list with the range of possible damages to the specified bridge, based on the parameter set.
+        
+    """        
+    uncer_output = []
+    for param in param_values:
+        curve = eq_curve.iloc[:,int(param[3])-1]
+        frag = numpy.interp(list(x[[x for x in vals_EQ ]]),list(curve.index), curve.values)
+        cost = x.cost[0]+((x.cost[1]-x.cost[0])*param[2])
+
+        uncer_output.append((cost*x.length*param[0]*param[1]*2+cost*x.length*param[0]*(1-param[1])*1)*frag)
+
+    if not sensitivity:
+        return monetary_risk(all_rps,list(zip(numpy.percentile(numpy.asarray(uncer_output), 0,axis=0),numpy.percentile(numpy.asarray(uncer_output), 20,axis=0),
+                                                numpy.percentile(numpy.asarray(uncer_output), 40,axis=0),numpy.percentile(numpy.asarray(uncer_output), 50,axis=0),
+                                                numpy.percentile(numpy.asarray(uncer_output), 60,axis=0),numpy.percentile(numpy.asarray(uncer_output), 80,axis=0),
+                                                numpy.percentile(numpy.asarray(uncer_output), 100,axis=0))))
+    else:
+        return sensitivity_risk(all_rps,[tuple(x) for x in numpy.array(uncer_output).T])
 
 def road_cyclone(x,events,param_values,sensitivity=False):
     """
@@ -119,7 +205,7 @@ def road_cyclone(x,events,param_values,sensitivity=False):
         uncer_events = []
         for event in events:
             if x['val_{}'.format(event)] > 150:
-                uncer_events.append(cleanup_cost_dict[x.road_type]*x['length_{}'.format(event)]*x.fail_prob)
+                uncer_events.append(cleanup_cost_dict[x.infra_type]*x['length_{}'.format(event)]*x.fail_prob)
             else:
                 uncer_events.append(0) 
         uncer_output.append(numpy.asarray(uncer_events))
@@ -197,7 +283,7 @@ def road_earthquake(x,global_costs,paved_ratios,frag_tables,events,wbreg_lookup,
     """       
     wbreg = wbreg_lookup[x.country]
 
-    ratios = paved_ratios.loc[(paved_ratios.ISO3 == x.country) & (paved_ratios.road_type == x.road_type)]
+    ratios = paved_ratios.loc[(paved_ratios.ISO3 == x.country) & (paved_ratios.road_type == x.infra_type)]
     costs = global_costs[wbreg]
     lengths = numpy.array(x[[x for x in list(x.index) if 'length_' in x]])
 
@@ -209,10 +295,10 @@ def road_earthquake(x,global_costs,paved_ratios,frag_tables,events,wbreg_lookup,
             loss_ratios.append(frag_tables[int(param[2])][[z for z in frag_tables[int(param[2])] if (z[0][0] <= x['val_{}'.format(event)] <= z[0][1]) & (z[1] == x.liquefaction)][0]]/100)
 
         loss_ratios = numpy.array(loss_ratios)
-        if x.road_type == 'primary':
+        if x.infra_type == 'primary':
             uncer_output.append(list((ratios.paved/100)*(param[0]*param[3]*costs['Paved 4L']+(1-param[0])*param[3]*costs['Paved 2L']))[0]*loss_ratios*lengths + 
             list((ratios.unpaved/100)*costs.Gravel)[0]*loss_ratios*lengths)
-        elif x.road_type == 'secondary':
+        elif x.infra_type == 'secondary':
             uncer_output.append(list((ratios.paved/100)*(param[1]*param[3]*costs['Paved 2L']+(1-param[1])*param[3]*150000))[0]*loss_ratios*lengths + 
             list((ratios.unpaved/100)*costs.Gravel)[0]*loss_ratios*lengths)   
         else:
@@ -298,7 +384,7 @@ def road_flood(x,global_costs,paved_ratios,flood_curve_paved,flood_curve_unpaved
 
     curve_paved = flood_curve_paved.loc[:,wbreg]
     curve_unpaved = flood_curve_unpaved.loc[:,wbreg]
-    ratios = paved_ratios.loc[(paved_ratios.ISO3 == x.country) & (paved_ratios.road_type == x.road_type)]
+    ratios = paved_ratios.loc[(paved_ratios.ISO3 == x.country) & (paved_ratios.road_type == x.infra_type)]
     costs = global_costs[wbreg]
     lengths = numpy.array(x[[x for x in list(x.index) if 'length_' in x]])
 
@@ -307,11 +393,11 @@ def road_flood(x,global_costs,paved_ratios,flood_curve_paved,flood_curve_unpaved
         paved_frag = numpy.interp(list(x[[x for x in val_cols if 'val' in x]]),list(curve_paved.index),(curve_paved.values)*param[2])
         unpaved_frag = numpy.interp(list(x[[x for x in val_cols if 'val' in x]]),list(curve_unpaved.index), curve_unpaved.values)
 
-        if x.road_type == 'primary':
+        if x.infra_type == 'primary':
             uncer_output.append(list((ratios.paved/100)*(param[0]*param[3]*costs['Paved 4L']
             +(1-param[0])*param[3]*costs['Paved 2L']))[0]*paved_frag*lengths 
              + list((ratios.unpaved/100)*costs.Gravel)[0]*unpaved_frag*lengths)
-        elif x.road_type == 'secondary':
+        elif x.infra_type == 'secondary':
             uncer_output.append(list((ratios.paved/100)*(param[1]*param[3]*costs['Paved 2L']
             +(1-param[1])*param[3]*150000))[0]*paved_frag*lengths 
             +list((ratios.unpaved/100)*costs.Gravel)[0]*unpaved_frag*lengths)   
@@ -397,7 +483,11 @@ def regional_bridge(file,data_path,param_values,income_lookup,eq_curve,design_ta
     df = pandas.read_feather(file)
 
     df = df.loc[~(df.length < 6)]
-    df = df.loc[~(df['road_type'] == 'nodata')]
+    if not rail:
+        df = df.loc[~(df['road_type'] == 'nodata')]
+    else:
+        df = df.loc[~(df['rail_type'] == 'nodata')]
+        
     df['cost'] = df.apply(lambda x: square_m2_cost_range(x),axis=1)
     df.drop([x for x in list(df.columns) if 'length_' in x],axis=1,inplace=True)
     vals_EQ = [x for x in list(df.columns) if 'val_EQ' in x]
@@ -421,12 +511,18 @@ def regional_bridge(file,data_path,param_values,income_lookup,eq_curve,design_ta
                     'length_EQ_rp975':'length_EQ_rp250',
                     'length_EQ_rp1500':'length_EQ_rp2475',
                     'length_EQ_rp2475':'length_EQ_rp975'}, axis='columns')
-
-    all_rps = [1/250,1/475,1/975,1/1500,1/2475]
-    events = ['EQ_rp250','EQ_rp475','EQ_rp975','EQ_rp1500','EQ_rp2475']
-    tqdm.pandas('Earthquake '+region)
-    df['EQ_risk'] = df.progress_apply(lambda x: asset_bridge_earthquake(x,eq_curve,param_values,vals_EQ,events,all_rps),axis=1)
-
+    try:    
+        all_rps = [1/250,1/475,1/975,1/1500,1/2475]
+        events = ['EQ_rp250','EQ_rp475','EQ_rp975','EQ_rp1500','EQ_rp2475']
+        tqdm.pandas('Earthquake '+region)
+        if not rail:
+            df['EQ_risk'] = df.progress_apply(lambda x: road_bridge_earthquake(x,eq_curve,param_values,vals_EQ,events,all_rps),axis=1)
+        else:
+            df['EQ_risk'] = df.progress_apply(lambda x: rail_bridge_earthquake(x,eq_curve,param_values,vals_EQ,events,all_rps),axis=1)
+            
+    except:
+        df['EQ_risk'] =[(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)]*len(df)
+        
     if df['IncomeGroup'].unique()[0] == 'HIC':
         design_table = design_tables[0]
     elif df['IncomeGroup'].unique()[0] == 'UMC':
@@ -434,27 +530,55 @@ def regional_bridge(file,data_path,param_values,income_lookup,eq_curve,design_ta
     else:
         design_table = design_tables[2]
 
-    all_rps = [1/5,1/10,1/20,1/50,1/75,1/100,1/200,1/250,1/500,1/1000]
-    events = ['FU-5', 'FU-10', 'FU-20', 'FU-50', 'FU-75', 'FU-100', 'FU-200', 'FU-250','FU-500', 'FU-1000']
-    tqdm.pandas(desc='Fluvial '+region)
-    df['FU_risk'] = df.progress_apply(lambda x: asset_bridge_flood_cyclone(x,design_table,depth_threshs,param_values,events,all_rps),axis=1)
+    try:
+        all_rps = [1/5,1/10,1/20,1/50,1/75,1/100,1/200,1/250,1/500,1/1000]
+        events = ['FU-5', 'FU-10', 'FU-20', 'FU-50', 'FU-75', 'FU-100', 'FU-200', 'FU-250','FU-500', 'FU-1000']
+        tqdm.pandas(desc='Fluvial '+region)
+        if not rail:
+            df['FU_risk'] = df.progress_apply(lambda x: road_bridge_flood_cyclone(x,design_table,depth_threshs,param_values,events,all_rps),axis=1)
+        else:
+            df['FU_risk'] = df.progress_apply(lambda x: rail_bridge_flood_cyclone(x,design_table,depth_threshs,param_values,events,all_rps),axis=1)
+            
+    except:
+        df['FU_risk'] = [(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)]*len(df)
+ 
+    try:
+        events = ['PU-5', 'PU-10', 'PU-20', 'PU-50', 'PU-75', 'PU-100', 'PU-200', 'PU-250','PU-500','PU-1000']
+        tqdm.pandas(desc='Pluvial '+region)
+        if not rail:
+            df['PU_risk'] = df.progress_apply(lambda x: road_bridge_flood_cyclone(x,design_table,depth_threshs,param_values,events,all_rps),axis=1)
+        else:
+            df['PU_risk'] = df.progress_apply(lambda x: rail_bridge_flood_cyclone(x,design_table,depth_threshs,param_values,events,all_rps),axis=1) 
+    except:
+        df['PU_risk'] = [(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)]*len(df)
+        
+    try:
+        all_rps = [1/10,1/20,1/50,1/100,1/200,1/500,1/1000]
+        events = ['CF-10', 'CF-20', 'CF-50', 'CF-100', 'CF-200', 'CF-500', 'CF-1000']
+        tqdm.pandas(desc='Coastal '+region)
+        if not rail:
+            df['CF_risk'] = df.progress_apply(lambda x: road_bridge_flood_cyclone(x,design_table,depth_threshs,param_values,events,all_rps),axis=1)
+        else:
+            df['CF_risk'] = df.progress_apply(lambda x: rail_bridge_flood_cyclone(x,design_table,depth_threshs,param_values,events,all_rps),axis=1) 
+    except:
+        df['CF_risk'] = [(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)]*len(df)
+        
+    try:
+        all_rps = [1/50,1/100,1/250,1/500,1/1000]
+        events = ['Cyc_rp50','Cyc_rp100','Cyc_rp250','Cyc_rp500','Cyc_rp1000']
+        tqdm.pandas(desc='Cyclones '+region)
+        if not rail:
+            df['Cyc_risk'] = df.progress_apply(lambda x: road_bridge_flood_cyclone(x,design_table,wind_threshs,param_values,events,all_rps),axis=1)
+        else:
+            df['Cyc_risk'] = df.progress_apply(lambda x: rail_bridge_flood_cyclone(x,design_table,wind_threshs,param_values,events,all_rps),axis=1) 
+    except:
+        df['Cyc_risk'] = [(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)]*len(df)
 
-
-    events = ['PU-5', 'PU-10', 'PU-20', 'PU-50', 'PU-75', 'PU-100', 'PU-200', 'PU-250','PU-500','PU-1000']
-    tqdm.pandas(desc='Pluvial '+region)
-    df['PU_risk'] = df.progress_apply(lambda x: asset_bridge_flood_cyclone(x,design_table,depth_threshs,param_values,events,all_rps),axis=1)
-
-
-    all_rps = [1/50,1/100,1/250,1/500,1/1000]
-    events = ['Cyc_rp50','Cyc_rp100','Cyc_rp250','Cyc_rp500','Cyc_rp1000']
-    tqdm.pandas(desc='Cyclones '+region)
-    df['Cyc_risk'] = df.progress_apply(lambda x: asset_bridge_flood_cyclone(x,design_table,wind_threshs,param_values,events,all_rps),axis=1)
-
-    save_df = df.groupby(['road_type','region','country','IncomeGroup'])['EQ_risk','FU_risk','PU_risk','Cyc_risk'].agg(sum_tuples)
-
-    save_df.to_csv(os.path.join(data_path,'bridge_road_risk','{}.csv'.format(region)))
-
-    return df.groupby(['road_type','region','country','IncomeGroup'])['EQ_risk','FU_risk','PU_risk','Cyc_risk'].agg(sum_tuples)
+    
+    if not rail:
+        return df.groupby(['road_type','region','country','IncomeGroup'])['EQ_risk','FU_risk','PU_risk','CF_risk','Cyc_risk'].agg(sum_tuples)
+    else:
+        return df.groupby(['rail_type','region','country','IncomeGroup'])['EQ_risk','FU_risk','PU_risk','CF_risk','Cyc_risk'].agg(sum_tuples)
 
 
 def regional_cyclone(cycfil,data_path,events,param_values,rail=False):
@@ -508,7 +632,7 @@ def regional_cyclone(cycfil,data_path,events,param_values,rail=False):
         else:
             df_cyc = df_cyc.progress_apply(lambda x: rail_cyclone(x,events,param_values),axis=1)
             
-        return df_cyc.groupby(['road_type','country','continent','region'])[events].agg(sum_tuples)
+        return df_cyc.groupby(['infra_type','country','continent','region'])[events].agg(sum_tuples)
     
     else:
         return None
@@ -613,9 +737,9 @@ def regional_earthquake(file,data_path,global_costs,paved_ratios,events,wbreg_lo
 
         df.reset_index(inplace=True,drop=True)
         
-        df.groupby(['road_type','country','continent','region'])[events].agg(sum_tuples).to_csv(os.path.join(data_path,'EQ_impacts','{}.csv'.format(region)))
+        df.groupby(['infra_type','country','continent','region'])[events].agg(sum_tuples).to_csv(os.path.join(data_path,'EQ_impacts','{}.csv'.format(region)))
         
-        return df.groupby(['road_type','country','continent','region'])[events].agg(sum_tuples)
+        return df.groupby(['infra_type','country','continent','region'])[events].agg(sum_tuples)
 
     except Exception as e:
         print('Failed to finish {} because of {}!'.format(file,e))
@@ -688,7 +812,7 @@ def regional_flood(file,data_path,global_costs,paved_ratios,flood_curve_paved,fl
             
     
         df.reset_index(inplace=True,drop=True)
-        return df.groupby(['road_type','country','continent','region'])[events].agg(sum_tuples)
+        return df.groupby(['infra_type','country','continent','region'])[events].agg(sum_tuples)
     except:
         print('{} failed'.format(file))
 
