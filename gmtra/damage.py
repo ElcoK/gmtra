@@ -42,22 +42,32 @@ def road_bridge_flood_cyclone(x,design_table,depth_threshs,param_values,events,a
         *list* : A list with the range of possible damages to the specified bridge, based on the parameter set.
         
     """    
+    
+    # loop over all parameter combinations that are predefined
     uncer_output = []
     for param in param_values:
+        
+        # get depth threshold for this parameter set
         depth_thresh = depth_threshs[int(param[4]-1)]
+        
+        # get the range of possible cost for this bridge asset and the parameter values
         cost = x.cost[0]+((x.cost[1]-x.cost[0])*param[3])
+        
+        # different assumptions are made for different road types (i.e. 4 vs 2 lanes and width)
         if x.road_type == 'primary':
             rps = ['val_'+z for z in events if 1/[int(z) for z in re.findall('\d+',z)][0] < design_table[0][0]]
             rps_not = ['val_'+z for z in events if 1/[int(z) for z in re.findall('\d+',z)][0] >= design_table[0][0]]
 
             frag = numpy.array([0]*len(rps_not)+list((x[rps] > depth_thresh[0])*1))
             uncer_output.append((cost*x.length*param[0]*param[1]*4+cost*x.length*param[0]*(1-param[1])*2)*frag)
+        
         elif x.road_type == 'secondary':
             rps = ['val_'+z for z in events if 1/[int(z) for z in re.findall('\d+',z)][0] < design_table[1][0]]
             rps_not = ['val_'+z for z in events if 1/[int(z) for z in re.findall('\d+',z)][0] >= design_table[1][0]]
 
             frag = numpy.array([0]*len(rps_not)+list((x[rps] > depth_thresh[1])*1))
             uncer_output.append((cost*x.length*param[0]*param[1]*4+cost*x.length*param[0]*(1-param[1])*2)*frag)
+        
         else:
             rps = ['val_'+z for z in events if 1/[int(z) for z in re.findall('\d+',z)][0] < design_table[2][0]]
             rps_not = ['val_'+z for z in events if 1/[int(z) for z in re.findall('\d+',z)][0] >= design_table[2][0]]
@@ -65,6 +75,7 @@ def road_bridge_flood_cyclone(x,design_table,depth_threshs,param_values,events,a
             frag = numpy.array([0]*len(rps_not)+list((x[rps] > depth_thresh[2])*1))
             uncer_output.append((cost*x.length*param[0]*param[1]*4+cost*x.length*param[0]*(1-param[1])*2)*frag)           
     
+    # for the sensitivity analysis we return all outputs, normally, we return a set of percentiles in the results.
     if not sensitivity:
         return monetary_risk(all_rps,list(zip(numpy.percentile(numpy.asarray(uncer_output), 0,axis=0),numpy.percentile(numpy.asarray(uncer_output), 20,axis=0),
                                                 numpy.percentile(numpy.asarray(uncer_output), 40,axis=0),numpy.percentile(numpy.asarray(uncer_output), 50,axis=0),
@@ -100,16 +111,25 @@ def rail_bridge_flood_cyclone(x,design_table,depth_threshs,param_values,events,a
         
     """ 
     
+    # loop over all parameter combinations that are predefined
     uncer_output = []
     for param in param_values:
+
+        # get depth threshold for this parameter set
         depth_thresh = depth_threshs[int(param[3]-1)]
+
+        # get the range of possible cost for this bridge asset and the parameter values
         cost = x.cost[0]+((x.cost[1]-x.cost[0])*param[2])
+        
+        # get hazard values from all return periods we are considering
         rps = ['val_'+z for z in events if 1/[int(z) for z in re.findall('\d+',z)][0] < design_table[0][0]]
         rps_not = ['val_'+z for z in events if 1/[int(z) for z in re.findall('\d+',z)][0] >= design_table[0][0]]
 
+        # estimate the fragility value and multiple this with the assumed cost.
         frag = numpy.array([0]*len(rps_not)+list((x[rps] > depth_thresh[0])*1))
         uncer_output.append((cost*x.length*param[0]*param[1]*2+cost*x.length*param[0]*(1-param[1])*1)*frag)
 
+    # for the sensitivity analysis we return all outputs, normally, we return a set of percentiles in the results.
     if not sensitivity:
         return monetary_risk(all_rps,list(zip(numpy.percentile(numpy.asarray(uncer_output), 0,axis=0),numpy.percentile(numpy.asarray(uncer_output), 20,axis=0),
                                                 numpy.percentile(numpy.asarray(uncer_output), 40,axis=0),numpy.percentile(numpy.asarray(uncer_output), 50,axis=0),
@@ -142,17 +162,24 @@ def road_bridge_earthquake(x,eq_curve,param_values,vals_EQ,all_rps,sensitivity=F
         *list* : A list with the range of possible damages to the specified bridge, based on the parameter set.
         
     """        
+    # loop over all parameter combinations that are predefined
     uncer_output = []
     for param in param_values:
+
+        # pick a curve from the set of earthquake curvs
         curve = eq_curve.iloc[:,int(param[4])-1]
+
+        # get the fragility value and cost based on the curve
         frag = numpy.interp(list(x[[x for x in vals_EQ ]]),list(curve.index), curve.values)
         cost = x.cost[0]+((x.cost[1]-x.cost[0])*param[3])
-
+        
+        # different assumptions are made for different road types (i.e. 4 vs 2 lanes and width)
         if x.road_type == 'primary':
             uncer_output.append((cost*x.length*param[0]*param[1]*4+cost*x.length*param[0]*(1-param[1])*2)*frag)
         else:
             uncer_output.append((cost*x.length*param[0]*param[2]*2+cost*x.length*param[0]*(1-param[2])*1)*frag)     
     
+     # for the sensitivity analysis we return all outputs, normally, we return a set of percentiles in the results.
     if not sensitivity:
         return monetary_risk(all_rps,list(zip(numpy.percentile(numpy.asarray(uncer_output), 0,axis=0),numpy.percentile(numpy.asarray(uncer_output), 20,axis=0),
                                                 numpy.percentile(numpy.asarray(uncer_output), 40,axis=0),numpy.percentile(numpy.asarray(uncer_output), 50,axis=0),
@@ -185,14 +212,20 @@ def rail_bridge_earthquake(x,eq_curve,param_values,vals_EQ,events,all_rps,sensit
         *list* : A list with the range of possible damages to the specified bridge, based on the parameter set.
         
     """        
+    # loop over all parameter combinations that are predefined
     uncer_output = []
     for param in param_values:
+        
+        # pick a curve from the set of earthquake curvs
         curve = eq_curve.iloc[:,int(param[3])-1]
+        
+        # get the fragility value and cost based on the curve
         frag = numpy.interp(list(x[[x for x in vals_EQ ]]),list(curve.index), curve.values)
         cost = x.cost[0]+((x.cost[1]-x.cost[0])*param[2])
 
         uncer_output.append((cost*x.length*param[0]*param[1]*2+cost*x.length*param[0]*(1-param[1])*1)*frag)
 
+    # for the sensitivity analysis we return all outputs, normally, we return a set of percentiles in the results.
     if not sensitivity:
         return monetary_risk(all_rps,list(zip(numpy.percentile(numpy.asarray(uncer_output), 0,axis=0),numpy.percentile(numpy.asarray(uncer_output), 20,axis=0),
                                                 numpy.percentile(numpy.asarray(uncer_output), 40,axis=0),numpy.percentile(numpy.asarray(uncer_output), 50,axis=0),
@@ -220,17 +253,23 @@ def road_cyclone(x,events,param_values,sensitivity=False):
         *list* : A list with the range of possible damages to the specified asset, based on the parameter set.
         
     """    
+    # loop over all parameter combinations that are predefined
     uncer_output = []
     for param in param_values:
+        # specify clean-up cost for different road types, based on set of parameter values.
         cleanup_cost_dict = {'primary' : param[0],'secondary' : param[1],'tertiary' : param[2],'track' : param[3],'other' : param[3], 'nodata': param[3]}
         uncer_events = []
         for event in events:
+            
+            # the threshold value for breaking of trees is
+            # hard-coded and based on literature. See Koks et al. (2019)
             if x['val_{}'.format(event)] > 150:
                 uncer_events.append(cleanup_cost_dict[x.infra_type]*x['length_{}'.format(event)]*x.fail_prob)
             else:
                 uncer_events.append(0) 
         uncer_output.append(numpy.asarray(uncer_events))
 
+    # for the sensitivity analysis we return all outputs, normally, we return a set of percentiles in the results.
     if not sensitivity:
         x[events] = list(zip(numpy.percentile(numpy.asarray(uncer_output), 0,axis=0),numpy.percentile(numpy.asarray(uncer_output), 20,axis=0),
         numpy.percentile(numpy.asarray(uncer_output), 40,axis=0),numpy.percentile(numpy.asarray(uncer_output), 50,axis=0),
@@ -261,16 +300,21 @@ def rail_cyclone(x,events,param_values,sensitivity=False):
     
     """
     
+    # loop over all parameter combinations that are predefined
     uncer_output = []
     for param in param_values:
         uncer_events = []
         for event in events:
+
+            # the threshold value for breaking of trees is
+            # hard-coded and based on literature. See Koks et al. (2019)
             if x['val_{}'.format(event)] > 150:
                 uncer_events.append((param[0]*param[2]*x['length_{}'.format(event)]*x.fail_prob)+(param[1]*(1-param[2])*x['length_{}'.format(event)]*x.fail_prob))
             else:
                 uncer_events.append(0) 
         uncer_output.append(numpy.asarray(uncer_events))
 
+    # for the sensitivity analysis we return all outputs, normally, we return a set of percentiles in the results.
     if not sensitivity:
         x[events] = list(zip(numpy.percentile(numpy.asarray(uncer_output), 0,axis=0),numpy.percentile(numpy.asarray(uncer_output), 20,axis=0),
         numpy.percentile(numpy.asarray(uncer_output), 40,axis=0),numpy.percentile(numpy.asarray(uncer_output), 50,axis=0),
@@ -317,12 +361,15 @@ def road_earthquake(x,global_costs,paved_ratios,frag_tables,events,wbreg_lookup,
 
     loss_ratios = []
     uncer_output = []
+    # loop over all parameter combinations that are predefined
     for param in param_values:
         loss_ratios = []
         for event in events:
             loss_ratios.append(frag_tables[int(param[2])][[z for z in frag_tables[int(param[2])] if (z[0][0] <= x['val_{}'.format(event)] <= z[0][1]) & (z[1] == x.liquefaction)][0]]/100)
 
+        # get the fragility value and cost based on the curve
         loss_ratios = numpy.array(loss_ratios)
+        # different assumptions are made for different road types (i.e. 4 vs 2 lanes and width)
         if x.infra_type == 'primary':
             uncer_output.append(list((ratios.paved/100)*(param[0]*param[3]*costs['Paved 4L']+(1-param[0])*param[3]*costs['Paved 2L']))[0]*loss_ratios*lengths + 
             list((ratios.unpaved/100)*costs.Gravel)[0]*loss_ratios*lengths)
@@ -333,6 +380,7 @@ def road_earthquake(x,global_costs,paved_ratios,frag_tables,events,wbreg_lookup,
             uncer_output.append(list((ratios.paved/100)*(ratios.Paved_4L*param[3]*costs['Paved 2L']+ratios.Paved_2L*param[3]*150000))[0]*loss_ratios*lengths + 
     list((ratios.unpaved/100)*costs.Gravel)[0]*loss_ratios*lengths)    
 
+    # for the sensitivity analysis we return all outputs, normally, we return a set of percentiles in the results.
     if not sensitivity:
         x[events] = list(zip(numpy.percentile(numpy.asarray(uncer_output), 0,axis=0),numpy.percentile(numpy.asarray(uncer_output), 20,axis=0),
         numpy.percentile(numpy.asarray(uncer_output), 40,axis=0),numpy.percentile(numpy.asarray(uncer_output), 50,axis=0),
@@ -365,9 +413,13 @@ def rail_earthquake(x,frag_tables,events,param_values,sensitivity=False):
         *list* : A list with the range of possible damages to the specified asset, based on the parameter set.        
         
     """
+    # specify cost for diesel (750k) and electric (1m)
     costs = (750000,1000000)
+    
+    # get length of all intersections for different hazards
     lengths = numpy.array(x[[x for x in list(x.index) if 'length_' in x]])
 
+    # loop over all parameter combinations that are predefined
     uncer_output = []
     for param in param_values:
         loss_ratios = []
@@ -376,6 +428,7 @@ def rail_earthquake(x,frag_tables,events,param_values,sensitivity=False):
 
         uncer_output.append(list((param[0]*(costs[0]*param[1])+(1-param[0])*(costs[1]*param[1]))*numpy.array(loss_ratios)*lengths))
 
+    # for the sensitivity analysis we return all outputs, normally, we return a set of percentiles in the results.
     if not sensitivity:
         x[events] = list(zip(numpy.percentile(numpy.asarray(uncer_output), 0,axis=0),numpy.percentile(numpy.asarray(uncer_output), 20,axis=0),
         numpy.percentile(numpy.asarray(uncer_output), 40,axis=0),numpy.percentile(numpy.asarray(uncer_output), 50,axis=0),
@@ -445,6 +498,7 @@ def road_flood(x,global_costs,paved_ratios,flood_curve_paved,flood_curve_unpaved
             +ratios.Paved_2L*param[3]*150000))[0]*paved_frag*lengths  
             + list((ratios.unpaved/100)*costs.Gravel)[0]*unpaved_frag*lengths)    
 
+    # for the sensitivity analysis we return all outputs, normally, we return a set of percentiles in the results.
     if not sensitivity:
         x[events] = list(zip(numpy.percentile(numpy.asarray(uncer_output), 0,axis=0),numpy.percentile(numpy.asarray(uncer_output), 20,axis=0),
         numpy.percentile(numpy.asarray(uncer_output), 40,axis=0),numpy.percentile(numpy.asarray(uncer_output), 50,axis=0),
@@ -492,6 +546,7 @@ def rail_flood(x,curve,events,param_values,val_cols,wbreg_lookup,sensitivity=Fal
 
         uncer_output.append(list((param[0]*(costs[0]*param[1])+(1-param[0])*(costs[1]*param[1]))*frag*lengths))
 
+    # for the sensitivity analysis we return all outputs, normally, we return a set of percentiles in the results.
     if not sensitivity:
         x[events] = list(zip(numpy.percentile(numpy.asarray(uncer_output), 0,axis=0),numpy.percentile(numpy.asarray(uncer_output), 20,axis=0),
         numpy.percentile(numpy.asarray(uncer_output), 40,axis=0),numpy.percentile(numpy.asarray(uncer_output), 50,axis=0),
