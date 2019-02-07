@@ -34,20 +34,29 @@ def regional_roads(region,prot_lookup,data_path):
     """
     try:
         print('{} started!'.format(region[3]))
+        # load ID and income group for the region
         ID = region[3]
         wbincome = region[14]
 
+        # specify all unique hazard abbrevations
         hazards = ['EQ','Cyc','PU','FU','CF']
         collect_risks = []
+        
+        # load regional statistics
         reg_stats = pandas.read_csv(os.path.join(data_path,'road_stats','{}_stats.csv'.format(ID)))
-
+        
+        # loop over all hazards
         for hazard in hazards:
+            # read exposure data
             df= pandas.read_feather(os.path.join(data_path,'output_{}_full'.format(hazard),'{}_{}.ft'.format(ID,hazard))) 
+            
+            # correct for protection standards for fluval and coastal flooding
             if (hazard == 'FU') | (hazard == 'CF'):
                 prot_stand = prot_lookup[ID]
                 no_floods= [x for x in [x for x in df.columns if ('val' in x)] if prot_stand > int(x.split('-')[1])]
                 df[no_floods] = 0
 
+            # correct for (assumed) design standards for surface flooding
             if (hazard == 'PU'):
                 if wbincome == 'HIC':
                     df.loc[df.road_type.isin(['primary','secondary']),['val_PU-5','val_PU-10','val_PU-20','val_PU-50']] = 0
@@ -59,6 +68,7 @@ def regional_roads(region,prot_lookup,data_path):
                     df.loc[df.road_type.isin(['primary','secondary']),['val_PU-5','val_PU-10']] = 0
                     df.loc[df.road_type.isin(['tertiary''track']),['val_PU-5','val_PU-10']] = 0
 
+            # correct for (assumed) design standards for river flooding
             if (hazard == 'FU'):
                 if wbincome == 'HIC':
                     df.loc[df.road_type.isin(['primary','secondary']),['val_FU-5','val_FU-10','val_FU-20','val_FU-50']] = 0
@@ -70,6 +80,7 @@ def regional_roads(region,prot_lookup,data_path):
                     df.loc[df.road_type.isin(['primary','secondary']),['val_FU-5','val_FU-10']] = 0
                     df.loc[df.road_type.isin(['tertiary''track']),['val_FU-5','val_FU-10']] = 0
 
+            # correct for (assumed) design standards for coastal flooding
             if (hazard == 'CF'):
                 if wbincome == 'HIC':
                     df.loc[df.road_type.isin(['primary','secondary']),['val_CF-10','val_CF-20','val_CF-50']] = 0
@@ -86,6 +97,7 @@ def regional_roads(region,prot_lookup,data_path):
             elif hazard != 'EQ':
                 reg_df = reg_df.merge(df[[x for x in df.columns if ('val_' in x) | ('length_' in x)]+['osm_id']],left_on='osm_id',right_on='osm_id')
 
+            # something went wrong in the order of the azard maps, correct that here. 
             if hazard == 'EQ':
                 event_list = ['EQ_rp250','EQ_rp475','EQ_rp975','EQ_rp1500','EQ_rp2475'] #
                 RPS = [1/250,1/475,1/975,1/1500,1/2475]
@@ -128,13 +140,16 @@ def regional_roads(region,prot_lookup,data_path):
                 RPS = [1/10,1/20,1/50,1/100,1/200,1/500,1/1000]
                 cat_list = [1,2,3,4]
                 bins = [-1,25,50,100,200,2000]
-                
+            
+            # calculate the annual kilometers of total possible roads for each asset 
             reg_stats[hazard] = reg_stats.apply(lambda x: total_length_risk(x,hazard,RPS),axis=1)        
 
+            # bin this into the four risk categories, as specified in the Supplementary Materials of Koks et al. (2019)
             for event in event_list:
                 reg_df['binned_{}'.format(event)] = pandas.cut(reg_df['val_{}'.format(event)], bins=bins, labels=[0]+cat_list)
 
             get_all_cats = []
+            # calculate the annual exposed kilometers of road per risk category per asset type
             for cat in cat_list[:]:
                 get_all_events = []
                 for event in event_list:
@@ -155,7 +170,8 @@ def regional_roads(region,prot_lookup,data_path):
                 get_all_cats.append(cat_df.groupby(['continent','country','region','road_type']).sum()['risk_{}_{}'.format(cat,hazard)])
 
             collect_risks.append(pandas.concat(get_all_cats,axis=1).fillna(0))
-
+        
+        # return results to be saved in one big file for all regions combined
         return (pandas.concat(collect_risks,axis=1).fillna(0)) 
 
     except Exception as e:
