@@ -24,14 +24,16 @@ def roads(data_path,area_name,regional=False):
         *regional* : Set to True if we want to extract a region.
     """
     
+    # open OpenStreetMap file
     if regional == True:
         data = load_osm_data_region(data_path,area_name)
     else:
         data = load_osm_data(data_path,area_name)
        
-    
+    # perform SQL query on the OpenStreetMap data
     sql_lyr = data.ExecuteSQL("SELECT osm_id,highway FROM lines WHERE highway IS NOT NULL")
     
+    # extract all roads from the .osm.pbf file
     roads=[]
     for feature in sql_lyr:
         if feature.GetField('highway') is not None:
@@ -42,6 +44,8 @@ def roads(data_path,area_name,regional=False):
             highway=feature.GetField('highway')
             roads.append([osm_id,highway,shapely_geo])
     
+    # if no roads are extracted (perhaps a natural area without roads or a badly mapped area, 
+    # we just return an empty geopandas GeoDataFrame)
     if len(roads) > 0:
         return geopandas.GeoDataFrame(roads,columns=['osm_id','infra_type','geometry'],crs={'init': 'epsg:4326'})
     else:
@@ -59,15 +63,17 @@ def railway(data_path,country,regional=True):
     Optional Arguments:
         *regional* : Set to True if we want to extract a region.
     """
-        
+    # open OpenStreetMap file
     if regional == True:
         data = load_osm_data_region(data_path,country)
     else:
         data = load_osm_data(data_path,country)
            
+    # perform SQL query on the OpenStreetMap data
     sql_lyr = data.ExecuteSQL("SELECT osm_id,service,railway FROM lines WHERE railway IS NOT NULL")
     
-    roads=[]
+    # extract all roads from the .osm.pbf file
+    railways=[]
     for feature in sql_lyr:
         if feature.GetField('railway') is not None:
             osm_id = feature.GetField('osm_id')
@@ -76,10 +82,12 @@ def railway(data_path,country,regional=True):
             if shapely_geo is None:
                 continue
             railway=feature.GetField('railway')
-            roads.append([osm_id,railway,service,shapely_geo])
+            railways.append([osm_id,railway,service,shapely_geo])
     
-    if len(roads) > 0:
-        return geopandas.GeoDataFrame(roads,columns=['osm_id','infra_type','service','geometry'],crs={'init': 'epsg:4326'})
+    # if no railways are extracted (perhaps a natural area without roads or a badly mapped area, 
+    # we just return an empty geopandas GeoDataFrame)
+    if len(railways) > 0:
+        return geopandas.GeoDataFrame(railways,columns=['osm_id','infra_type','service','geometry'],crs={'init': 'epsg:4326'})
     else:
         print('No railway in {}'.format(country))
         
@@ -96,14 +104,17 @@ def bridges(data_path,area_name,regional=True):
         *regional* : Set to True if we want to extract a region.
     """    
     
+    # open OpenStreetMap file
     if regional == True:
         data = load_osm_data_region(data_path,area_name)
     else:
         data = load_osm_data(data_path,area_name)
            
+    # perform SQL query on the OpenStreetMap data
     sql_lyr = data.ExecuteSQL("SELECT osm_id,bridge,highway,railway,lanes FROM lines WHERE bridge IS NOT NULL")
     
-    roads=[]
+    # extract all bridges from the .osm.pbf file
+    bridges=[]
     for feature in sql_lyr:
         if feature.GetField('bridge') is not None:
             osm_id = feature.GetField('osm_id')
@@ -114,9 +125,11 @@ def bridges(data_path,area_name,regional=True):
             shapely_geo = shapely.wkt.loads(feature.geometry().ExportToWkt()) 
             if shapely_geo is None:
                 continue
-            roads.append([osm_id,bridge,lanes,highway,railway,shapely_geo])
+            bridges.append([osm_id,bridge,lanes,highway,railway,shapely_geo])
     
-    if len(roads) > 0:
-        return geopandas.GeoDataFrame(roads,columns=['osm_id','bridge','lanes','road_type','rail_type','geometry'],crs={'init': 'epsg:4326'})
+    # if no roads are extracted (perhaps a natural area without roads or a badly mapped area, 
+    # we just return an empty geopandas GeoDataFrame)   
+    if len(bridges) > 0:
+        return geopandas.GeoDataFrame(bridges,columns=['osm_id','bridge','lanes','road_type','rail_type','geometry'],crs={'init': 'epsg:4326'})
     else:
         print('No bridges in {}'.format(area_name))

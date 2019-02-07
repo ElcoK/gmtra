@@ -82,6 +82,7 @@ def load_hazard_map(hzd_path):
         *hzd_path* : file path to location of the hazard map.
         
     """    
+    # open hazard map using rasterio
     with rio.open(hzd_path) as src:
         affine = src.affine
         # Read as numpy array
@@ -115,12 +116,15 @@ def load_ssbn_hazard(hazard_path,country_full,country_ISO2,flood_type,flood_type
         
     """
     
-
+    # specify path to the hazard map
     flood_path = os.path.join(hazard_path,'InlandFlooding',country_full,'{}_{}_merged'.format(country_ISO2,flood_type),'{}-{}-{}.tif'.format(country_ISO2,flood_type_abb,rp))    
 
+    # open hazard map using rasterio
     with rio.open(flood_path) as src:
         affine = src.affine
         array = src.read(1)
+        
+        # change value 999 (waterways and bodies) to -9999 (nodata).
         array[array == 999] = -9999
     
     return array,affine
@@ -242,10 +246,13 @@ def square_m2_cost_range(x):
     Returns:
         *list*: a list with the range of possible bridge costs.
     """
+    
+    # specify range of cost values for different bridge lengths.
     short_bridge = [int(10.76*115),int(10.76*200)]
     medium_bridge = [int(10.76*85),int(10.76*225)]
     long_bridge = [int(10.76*85),int(10.76*225)]
 
+    # and return this range based on the bridge length
     if (x.length > 6) & (x.length <= 30):
         return short_bridge
     elif (x.length > 30) & (x.length <= 100):
@@ -345,15 +352,18 @@ def create_folder_lookup():
     'french_polynesia':'nodata',
     'cook_islands':'nodata'})
 
+    # first catch several countries that are not in the data
     notmatchingfull = defaultdict(default_factory,{'GGY':'Guernsey','JEY':'Jersey','MAF':'Saint Martin','SDN':'Sudan','SSD':'South Sudan','XKO': 'Kosovo'})
     fullback = defaultdict(default_factory,{'Guernsey':'GGY','Jersey':'JEY','Saint Martin':'MAF','Sudan':'SUD','South Sudan':'SDS'})
     
+    # load data files and change some of the names to make them matching
     global_data = gpd.read_file(os.path.join(data_path,'input_data','global_countries.shp'))
     glob_data_full = [coco.convert(names=[x], to='name_short').lower().replace(' ','_').replace("'","") if x not in notmatchingfull 
                       else notmatchingfull[x] for x in list(global_data.ISO_3digit)]
     glob_data_full = ['micronesia' if x.startswith('micronesia') else str(x) for x in glob_data_full]
     glob_data_full = [x for x in glob_data_full if x != 'not_found']
     
+    # and create a dictioniary that matches ISO3 codes with the country name datapaths for the FATHOM data.
     country_dataname = os.listdir(os.path.join(hazard_path,'InlandFlooding'))
     glob_name_folder = [right_folder_name[x] if x not in country_dataname else x for x in glob_data_full ]
     ISO3_lookup = [coco.convert(names=[x.replace('_',' ')], to='ISO3') if x not in fullback 

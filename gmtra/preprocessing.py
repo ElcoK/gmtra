@@ -32,19 +32,25 @@ def region_bridges(x):
         *GeoDataFrame* : A geopandas GeoDataFrame with all bridges in a region. Will also save this to a .csv file.
                       
     """
+    # get the name of the region from the row
     region = x[3]
     try:
         data_path = load_config()['paths']['data']
             
+        # extract bridges from OpenStreetMAp
         bridges_osm = bridges(data_path,region,regional=True)
 
+        # estimate length of each bridges in meters
         bridges_osm['length'] = bridges_osm.geometry.apply(line_length)
         bridges_osm['length'] = bridges_osm['length']*1000
         road_dict = map_roads()
+        
+        # map roads to primary, secondary, tertiary and other roads.
         bridges_osm['road_type'] = bridges_osm.road_type.apply(lambda y: road_dict[y])        
         bridges_osm['region'] = region
         bridges_osm['country'] = region[:3]        
         
+        # save to .csv
         bridges_osm.to_csv(os.path.join(data_path,'bridges_osm','{}.csv'.format(region)))
         
         print('{} finished!'.format(region))
@@ -67,8 +73,12 @@ def remove_tiny_shapes(x,regionalized=False):
         *MultiPolygon* : a shapely geometry MultiPolygon without tiny shapes.
         
     """
+    
+    # if its a single polygon, just return the polygon geometry
     if x.geometry.geom_type == 'Polygon':
         return x.geometry
+    
+    # if its a multipolygon, we start trying to simplify and remove shapes if its too big.
     elif x.geometry.geom_type == 'MultiPolygon':
         
         if regionalized == False:
@@ -112,9 +122,11 @@ def planet_osm():
     data_path = load_config()['paths']['data']
     osm_path_in = os.path.join(data_path,'planet_osm')
 
+    # create directory to save planet osm file if that directory does not exit yet.
     if not os.path.exists(osm_path_in):
         os.makedirs(osm_path_in)
     
+    # if planet file is not downloaded yet, download it.
     if 'planet-latest.osm.pbf' not in os.listdir(osm_path_in):
         
         url = 'https://planet.openstreetmap.org/pbf/planet-latest.osm.pbf'
@@ -523,10 +535,13 @@ def merge_SSBN_maps(country):
     try:
         print('{} started!'.format(country))
         
+        # get path where all hazards all located
         hazard_path =  load_config()['paths']['hazard_data']
         
+        # get dictioniary in which we can lookup the name of the country used in the FATHOM flood files.
         folder_lookup = create_folder_lookup()
         
+        # get ISO2 and full country names for each country
         country_ISO2 = coco.convert(names=[country], to='ISO2')
         country_full = folder_lookup[country]
         
@@ -537,6 +552,7 @@ def merge_SSBN_maps(country):
         
         flood_mapping = dict(zip(flood_types,flood_types_abb))
         
+        # merge all subcountry files into one country file for each hazard.
         for flood_type in flood_types:
             new_folder = os.path.join(hazard_path,'InlandFlooding',country_full,'{}_{}_merged'.format(country_ISO2,flood_type))
             try:
@@ -555,16 +571,3 @@ def merge_SSBN_maps(country):
     except:
         print('{} failed! It seems we do not have proper flood data for this country.'.format(country))
            
-
-def run_SSBN_merge(from_=0,to_=235):
-    """
-    Merge all countries parallel.
-    """
-    
-    data_path = load_config()['paths']['data']
-    
-    global_data = geopandas.read_file(os.path.join(data_path,'input_data','global_countries.shp'))
-    global_data = global_data[int(from_):int(to_)]
-               
-    with Pool(cpu_count()-1) as pool: 
-        pool.map(merge_SSBN_maps,(global_data['ISO_3digit']),chunksize=1) 

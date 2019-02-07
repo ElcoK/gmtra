@@ -18,7 +18,7 @@ from gmtra.utils import load_config
 import gmtra.sensitivity as sensitivity
 import gmtra.damage as damage
 from gmtra.hazard import region_intersection
-from gmtra.preprocessing import region_bridges
+from gmtra.preprocessing import region_bridges,merge_SSBN_maps
 
 def get_all_bridges():
     data_path = load_config()['paths']['data']
@@ -32,6 +32,20 @@ def get_all_bridges():
     all_bridges = pandas.concat(collect_bridges)
     all_bridges.reset_index(inplace=True,drop=True)
     all_bridges.to_csv(os.path.join(data_path,'output_data','osm_bridges.csv'))
+
+
+def run_SSBN_merge(from_=0,to_=235):
+    """
+    Merge all countries parallel.
+    """
+    
+    data_path = load_config()['paths']['data']
+    
+    global_data = geopandas.read_file(os.path.join(data_path,'input_data','global_countries.shp'))
+    global_data = global_data[int(from_):int(to_)]
+               
+    with Pool(cpu_count()-1) as pool: 
+        pool.map(merge_SSBN_maps,(global_data['ISO_3digit']),chunksize=1) 
 
 def hazard_intersection(hzd,rail=False,from_=0,to_=46433):
     """
