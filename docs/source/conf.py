@@ -36,12 +36,12 @@ for mod_name in MOCK_MODULES:
 
 # -- Project information -----------------------------------------------------
 
-project = 'gmtra'
+project = 'Global Multihazard Transport Risk Analysis'
 copyright = '2019, Elco Koks'
 author = 'Elco Koks'
 
 # The short X.Y version
-version = ''
+version = '0.1'
 # The full version, including alpha/beta/rc tags
 release = '0.1'
 
@@ -57,7 +57,8 @@ release = '0.1'
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
-]
+    'sphinx.ext.viewcode']
+
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

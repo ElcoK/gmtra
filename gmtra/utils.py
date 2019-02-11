@@ -157,7 +157,7 @@ def sum_tuples(l):
     """
     return tuple(sum(x) for x in zip(*l))
 
-def sensitivity_risk(RPS,loss_list):
+def sensitivity_risk(RPS,loss_list,param_length):
     """
     Function to estimate the monetary risk for a particular hazard within the sensitivity analysis.
     
@@ -171,7 +171,7 @@ def sensitivity_risk(RPS,loss_list):
     """
 
     collect_risks = []
-    for y in range(50):
+    for y in range(param_length):
         collect_risks.append(integrate.simps([x[y] for x in loss_list][::-1], x=RPS[::-1]))
     return collect_risks
 
