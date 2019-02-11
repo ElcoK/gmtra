@@ -35,10 +35,6 @@ Merge SSBN maps within a country
 ------------------------------------------------
 .. autofunction:: gmtra.preprocessing.merge_SSBN_maps
 
-Merge SSBN maps for all countries
-------------------------------------------------
-.. autofunction:: gmtra.preprocessing.run_SSBN_merge
-
 Extract bridges from OpenStreetMap
 ------------------------------------------------
 .. autofunction:: gmtra.preprocessing.region_bridges

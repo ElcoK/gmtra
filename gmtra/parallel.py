@@ -278,7 +278,6 @@ def bridge_damage(rail=False):
         # Generate samples
         param_values = morris.sample(problem, 10, num_levels=4, grid_jump=2,local_optimization =True)
     
-    
     # prepare multiprocessing
     param_list = [param_values]*len(all_files)
     data_p_list = [data_path]*len(all_files)
