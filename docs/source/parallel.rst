@@ -2,6 +2,17 @@
 =======================
 9. Parallel functions
 =======================
+.. autofunction:: gmtra.parallel.bridge_extraction
+
+.. autofunction:: gmtra.parallel.SSBN_merge
+
+.. autofunction:: gmtra.parallel.tree_values
+
+.. autofunction:: gmtra.parallel.liquefaction_overlays
+
+.. autofunction:: gmtra.parallel.hazard_intersection
+
+.. autofunction:: gmtra.parallel.exposure_analysis
 
 .. autofunction:: gmtra.parallel.bridge_damage
 
