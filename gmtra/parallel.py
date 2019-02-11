@@ -17,10 +17,11 @@ from SALib.sample import morris
 from gmtra.utils import load_config
 import gmtra.sensitivity as sensitivity
 import gmtra.damage as damage
-from gmtra.hazard import region_intersection
+from gmtra.hazard import region_intersection,get_tree_density,get_liquefaction_region
 from gmtra.preprocessing import region_bridges,merge_SSBN_maps
+from gmtra.exposure import regional_roads,regional_railway
 
-def get_all_bridges():
+def bridge_stats():
     data_path = load_config()['paths']['data']
 
     global_regions = geopandas.read_file(os.path.join(data_path,'input_data','global_regions_v2.shp'))
@@ -33,6 +34,39 @@ def get_all_bridges():
     all_bridges.reset_index(inplace=True,drop=True)
     all_bridges.to_csv(os.path.join(data_path,'output_data','osm_bridges.csv'))
 
+def exposure(rail=False): 
+    """
+    Get exposure statistics for all road or railway assets in all regions.
+    
+    Optional Arguments:
+        *rail* : Default is **False**. Set to **True** if you would like to 
+        intersect the railway assets in a region.
+    
+    """
+    data_path = load_config()['paths']['data']
+    global_regions = geopandas.read_file(os.path.join(data_path,'input_data','global_regions_v2.shp'))
+    incomegroups = pandas.read_csv(os.path.join(data_path,'input_data','incomegroups_2018.csv'),index_col=[0])
+    income_dict = dict(zip(incomegroups.index,incomegroups.GroupCode))
+    global_regions['wbincome'] = global_regions.GID_0.apply(lambda x : income_dict[x]) 
+    
+    global_regions = global_regions.loc[global_regions.GID_2.isin([(x.split('.')[0]) for x in os.listdir(os.path.join(data_path,'region_osm'))])]
+    prot_lookup = dict(zip(global_regions['GID_2'],global_regions['prot_stand']))
+
+    regions = list(global_regions.to_records())
+    prot_lookups = [prot_lookup]*len(regions)
+    data_paths = [data_path]*len(regions)    
+
+    if not rail:
+        with Pool(cpu_count()-1) as pool: 
+            collect_output = pool.starmap(regional_roads,zip(regions,prot_lookups,data_paths),chunksize=1) 
+    
+        pandas.concat(collect_output).to_csv(os.path.join(data_path,'summarized','total_exposure_road.csv'))
+    
+    else:
+        with Pool(cpu_count()-1) as pool: 
+            collect_output = pool.starmap(regional_railway,zip(regions,prot_lookups,data_paths),chunksize=1) 
+    
+        pandas.concat(collect_output).to_csv(os.path.join(data_path,'summarized','total_exposure_railway.csv'))
 
 def run_SSBN_merge(from_=0,to_=235):
     """
@@ -465,7 +499,7 @@ def flood_sensitivity(hazard,rail=False,region_count=1000):
             pandas.concat(collect_output).to_csv(os.path.join(data_path,'summarized','sa_{}_rai.csv').format(hazard))
 
        
-def get_all_tree_values():
+def tree_values():
     """
     Function to run intersection for all regions parallel.
     """
@@ -480,7 +514,7 @@ def get_all_tree_values():
         pool.map(get_tree_density,list(global_regions.to_records()),chunksize=1) 
 
 
-def get_all_liquefaction_overlays():
+def liquefaction_overlays():
     """
     Function to run intersection for all regions parallel.
     """

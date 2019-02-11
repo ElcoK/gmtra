@@ -329,38 +329,3 @@ def regional_railway(region,prot_lookup,data_path):
 
     except:
         print('{} failed'.format(region[3]))
-
-def all_regions_parallel(rail=False): 
-    """
-    Get exposure statistics for all road or railway assets in all regions.
-    
-    Optional Arguments:
-        *rail* : Default is **False**. Set to **True** if you would like to 
-        intersect the railway assets in a region.
-    
-    """
-    data_path = load_config()['paths']['data']
-    global_regions = geopandas.read_file(os.path.join(data_path,'input_data','global_regions_v2.shp'))
-    incomegroups = pandas.read_csv(os.path.join(data_path,'input_data','incomegroups_2018.csv'),index_col=[0])
-    income_dict = dict(zip(incomegroups.index,incomegroups.GroupCode))
-    global_regions['wbincome'] = global_regions.GID_0.apply(lambda x : income_dict[x]) 
-    
-    global_regions = global_regions.loc[global_regions.GID_2.isin([(x.split('.')[0]) for x in os.listdir(os.path.join(data_path,'region_osm'))])]
-    prot_lookup = dict(zip(global_regions['GID_2'],global_regions['prot_stand']))
-
-
-    regions = list(global_regions.to_records())
-    prot_lookups = [prot_lookup]*len(regions)
-    data_paths = [data_path]*len(regions)    
-
-    if not rail:
-        with Pool(cpu_count()-1) as pool: 
-            collect_output = pool.starmap(regional_roads,zip(regions,prot_lookups,data_paths),chunksize=1) 
-    
-        pandas.concat(collect_output).to_csv(os.path.join(data_path,'summarized','total_exposure_road.csv'))
-    
-    else:
-        with Pool(cpu_count()-1) as pool: 
-            collect_output = pool.starmap(regional_roads,zip(regions,prot_lookups,data_paths),chunksize=1) 
-    
-        pandas.concat(collect_output).to_csv(os.path.join(data_path,'summarized','total_exposure_railway.csv'))
