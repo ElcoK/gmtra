@@ -17,7 +17,9 @@ from gmtra.fetch import roads,railway
 
 
 def all_outputs():
-    
+    """
+    Summarize all outputs into .csv files per hazard and asset type.
+    """
     data_path = load_config()['paths']['data']
 
     # Fluvial Flooding

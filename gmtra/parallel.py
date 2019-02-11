@@ -696,10 +696,10 @@ def flood_sensitivity(hazard,rail=False,region_count=1000):
     # import curves, costs and paved vs unpaved ratios
     if not rail:
         flood_curve_paved = pandas.read_excel(os.path.join(data_path,'input_data','Costs_curves.xlsx'),usecols=[1,2,3,4,5,6,7,8],
-                                     sheet_name='Flooding',index_col=[0],skipfooter=9,header = [0,1])
+                                     sheet_name='Flooding',index_col=[0],skiprows=1)
         flood_curve_paved.columns = flood_curve_paved.columns.droplevel(0)
         flood_curve_unpaved = pandas.read_excel(os.path.join(data_path,'input_data','Costs_curves.xlsx'),usecols=[11,12,13,14,15,16,17,18],
-                                     sheet_name='Flooding',index_col=[0],skipfooter=9,header = [0,1])
+                                     sheet_name='Flooding',index_col=[0],skiprows=1)
         flood_curve_unpaved.columns = flood_curve_unpaved.columns.droplevel(0)
         
         global_costs = pandas.read_excel(os.path.join(data_path,'input_data','Costs_curves.xlsx'),usecols=7,header=0,index_col=0,skipfooter =45)
@@ -711,7 +711,7 @@ def flood_sensitivity(hazard,rail=False,region_count=1000):
         
     else:
         curve = pandas.read_excel(os.path.join(data_path,'input_data','Costs_curves.xlsx'),usecols=[1,2,3,4,5,6,7,8],
-                                 sheet_name='Flooding',index_col=[0],skipfooter=9,header = [0,1])
+                                     sheet_name='Flooding',index_col=[0],skipfooter=9,skiprows=1)
         curve.columns = curve.columns.droplevel(0)       
         
     # Load all files for which we have intersection data
