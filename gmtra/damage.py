@@ -352,11 +352,17 @@ def road_earthquake(x,global_costs,paved_ratios,frag_tables,events,wbreg_lookup,
 
     Returns:
         *list* : A list with the range of possible damages to the specified asset, based on the parameter set.        
-    """       
+    """        
+    # get worldbank region 
     wbreg = wbreg_lookup[x.country]
 
+    # get paved versus unpaved ratios for this region
     ratios = paved_ratios.loc[(paved_ratios.ISO3 == x.country) & (paved_ratios.road_type == x.infra_type)]
+    
+    # get road building cost for this region
     costs = global_costs[wbreg]
+    
+    # get list of unique columns that have the intersection length
     lengths = numpy.array(x[[x for x in list(x.index) if 'length_' in x]])
 
     loss_ratios = []
@@ -472,19 +478,30 @@ def road_flood(x,global_costs,paved_ratios,flood_curve_paved,flood_curve_unpaved
         *list* : A list with the range of possible damages to the specified asset, based on the parameter set.
         
     """     
+    # get worldbank region 
     wbreg = wbreg_lookup[x.country]
 
+    # get set of fragility curves for paved and unpaved roads
     curve_paved = flood_curve_paved.loc[:,wbreg]
     curve_unpaved = flood_curve_unpaved.loc[:,wbreg]
+    
+     # get paved versus unpaved ratios for this region
     ratios = paved_ratios.loc[(paved_ratios.ISO3 == x.country) & (paved_ratios.road_type == x.infra_type)]
+    
+    # get road building cost for this region
     costs = global_costs[wbreg]
+    
+    # get list of unique columns that have the intersection length
     lengths = numpy.array(x[[x for x in list(x.index) if 'length_' in x]])
 
+    # loop over all parameter combinations that are predefined
     uncer_output = []
     for param in param_values:
+        # get the fragility value and based on the curve
         paved_frag = numpy.interp(list(x[[x for x in val_cols if 'val' in x]]),list(curve_paved.index),(curve_paved.values)*param[2])
         unpaved_frag = numpy.interp(list(x[[x for x in val_cols if 'val' in x]]),list(curve_unpaved.index), curve_unpaved.values)
 
+        # different assumptions are made for different road types (i.e. 4 vs 2 lanes and width)
         if x.infra_type == 'primary':
             uncer_output.append(list((ratios.paved/100)*(param[0]*param[3]*costs['Paved 4L']
             +(1-param[0])*param[3]*costs['Paved 2L']))[0]*paved_frag*lengths 
@@ -534,14 +551,22 @@ def rail_flood(x,curve,events,param_values,val_cols,wbreg_lookup,sensitivity=Fal
         *list* : A list with the range of possible damages to the specified asset, based on the parameter set.        
 
     """    
+    # get worldbank region 
     wbreg = wbreg_lookup[x.country]
 
+    # get set of fragility curves
     curve = curve.loc[:,wbreg]
+
+    # specify rail building cost for this region
     costs = (750000,1000000)
+
+    # get list of unique columns that have the intersection length
     lengths = numpy.array(x[[x for x in list(x.index) if 'length_' in x]])
 
+    # loop over all parameter combinations that are predefined
     uncer_output = []
     for param in param_values:
+        # get the fragility value and based on the curve
         frag = numpy.interp(list(x[[x for x in val_cols if 'val' in x]]),list(curve.index),(curve.values)*param[2])
 
         uncer_output.append(list((param[0]*(costs[0]*param[1])+(1-param[0])*(costs[1]*param[1]))*frag*lengths))
@@ -586,21 +611,31 @@ def regional_bridge(file,data_path,param_values,income_lookup,eq_curve,design_ta
         *DataFrame* : a pandas DataFrame with summary damage statistics for the loaded region.
         
     """    
+    
+    # open regiona bridge file
     df = pandas.read_feather(file)
 
+    # remove all bridges that are shorter than 6 meters. We assume those are culverts.
     df = df.loc[~(df.length < 6)]
+    
+    # only get the road or railway bridges, depending on what we want.
     if not rail:
         df = df.loc[~(df['road_type'] == 'nodata')]
     else:
         df = df.loc[(df['road_type'] == 'nodata')]
         
+    # get range of possible costs based on the length of the bridge
     df['cost'] = df.apply(lambda x: square_m2_cost_range(x),axis=1)
     df.drop([x for x in list(df.columns) if 'length_' in x],axis=1,inplace=True)
+    
+    # get earthquake values.
     vals_EQ = [x for x in list(df.columns) if 'val_EQ' in x]
 
+    # assign World Bank income group
     df['IncomeGroup'] = income_lookup[list(df.country.unique())[0]]
     region = list(df.region.unique())[0]
 
+    # something went wrong in the order of the hazard maps, correct that here. 
     df = df.rename({'val_Cyc_rp100':'val_Cyc_rp500',
                     'val_Cyc_rp500':'val_Cyc_rp1000', 
                     'val_Cyc_rp1000':'val_Cyc_rp100',
@@ -617,6 +652,8 @@ def regional_bridge(file,data_path,param_values,income_lookup,eq_curve,design_ta
                     'length_EQ_rp975':'length_EQ_rp250',
                     'length_EQ_rp1500':'length_EQ_rp2475',
                     'length_EQ_rp2475':'length_EQ_rp975'}, axis='columns')
+    
+    # estimate earthquake damages
     try:    
         all_rps = [1/250,1/475,1/975,1/1500,1/2475]
         events = ['EQ_rp250','EQ_rp475','EQ_rp975','EQ_rp1500','EQ_rp2475']
@@ -636,6 +673,7 @@ def regional_bridge(file,data_path,param_values,income_lookup,eq_curve,design_ta
     else:
         design_table = design_tables[2]
 
+    # estimate river flood damages
     try:
         all_rps = [1/5,1/10,1/20,1/50,1/75,1/100,1/200,1/250,1/500,1/1000]
         events = ['FU-5', 'FU-10', 'FU-20', 'FU-50', 'FU-75', 'FU-100', 'FU-200', 'FU-250','FU-500', 'FU-1000']
@@ -647,7 +685,8 @@ def regional_bridge(file,data_path,param_values,income_lookup,eq_curve,design_ta
             
     except:
         df['FU_risk'] = [(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)]*len(df)
- 
+
+    # estimate surface flood damages 
     try:
         events = ['PU-5', 'PU-10', 'PU-20', 'PU-50', 'PU-75', 'PU-100', 'PU-200', 'PU-250','PU-500','PU-1000']
         tqdm.pandas(desc='Pluvial '+region)
@@ -657,7 +696,8 @@ def regional_bridge(file,data_path,param_values,income_lookup,eq_curve,design_ta
             df['PU_risk'] = df.progress_apply(lambda x: rail_bridge_flood_cyclone(x,design_table,depth_threshs,param_values,events,all_rps),axis=1) 
     except:
         df['PU_risk'] = [(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)]*len(df)
-        
+
+    # estimate coastal flood damages        
     try:
         all_rps = [1/10,1/20,1/50,1/100,1/200,1/500,1/1000]
         events = ['CF-10', 'CF-20', 'CF-50', 'CF-100', 'CF-200', 'CF-500', 'CF-1000']
@@ -668,7 +708,8 @@ def regional_bridge(file,data_path,param_values,income_lookup,eq_curve,design_ta
             df['CF_risk'] = df.progress_apply(lambda x: rail_bridge_flood_cyclone(x,design_table,depth_threshs,param_values,events,all_rps),axis=1) 
     except:
         df['CF_risk'] = [(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)]*len(df)
-        
+
+    # estimate cyclone damages        
     try:
         all_rps = [1/50,1/100,1/250,1/500,1/1000]
         events = ['Cyc_rp50','Cyc_rp100','Cyc_rp250','Cyc_rp500','Cyc_rp1000']
@@ -680,19 +721,20 @@ def regional_bridge(file,data_path,param_values,income_lookup,eq_curve,design_ta
     except:
         df['Cyc_risk'] = [(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)]*len(df)
 
-    
+    # return output     
     if not rail:
         return df.groupby(['road_type','region','country','IncomeGroup'])['EQ_risk','FU_risk','PU_risk','CF_risk','Cyc_risk'].agg(sum_tuples)
     else:
         return df.groupby(['rail_type','region','country','IncomeGroup'])['EQ_risk','FU_risk','PU_risk','CF_risk','Cyc_risk'].agg(sum_tuples)
 
 
-def regional_cyclone(cycfil,data_path,events,param_values,rail=False):
+def regional_cyclone(file,data_path,events,param_values,rail=False):
     """
-    Function to estimate the summary statistics of all cyclone damages in a region to road assets
+    Function to estimate the summary statistics of all cyclone damages in a region to road assets. 
+    Cyclone damage for roads is currently based on clean-up cost and repairs.
 
     Arguments:
-        *cycfil* : path to the .feather file with all bridges of a region.
+        *file* : path to the .feather file with all bridges of a region.
         
         *data_path* : file path to location of all data.
         
@@ -708,43 +750,66 @@ def regional_cyclone(cycfil,data_path,events,param_values,rail=False):
         *DataFrame* : a pandas DataFrame with summary damage statistics for the loaded region.
         
     """    
-    #    try:
-    if not rail:
-        all_tree_cov = [os.path.join(data_path,'tree_cover_road',x) for x in os.listdir(os.path.join(data_path,'tree_cover_road'))]
-    else:
-        all_tree_cov = [os.path.join(data_path,'tree_cover_rail',x) for x in os.listdir(os.path.join(data_path,'tree_cover_rail'))]
+    try:
+        # open tree cover for the region
+        if not rail:
+            all_tree_cov = [os.path.join(data_path,'tree_cover_road',x) for x in os.listdir(os.path.join(data_path,'tree_cover_road'))]
+        else:
+            all_tree_cov = [os.path.join(data_path,'tree_cover_rail',x) for x in os.listdir(os.path.join(data_path,'tree_cover_rail'))]
+            
+        # open cyclone intersection file for the region
+        df_cyc = pandas.read_feather(file)
+        val_cols = [x for x in list(df_cyc.columns) if 'val' in x]
         
-    
-    df_cyc = pandas.read_feather(cycfil)
-    val_cols = [x for x in list(df_cyc.columns) if 'val' in x]
-    df_cyc = df_cyc.loc[~(df_cyc[val_cols] < 151).all(axis=1)]
-    
-    if len(df_cyc) > 0:
+        # drop all rows where cyclone wind speed is below 151km/h, which is assumed to be the critical treshold for tree snapping.
+        df_cyc = df_cyc.loc[~(df_cyc[val_cols] < 151).all(axis=1)]
+        
+        # stop here if it means that actually nothing is being affected.
+        if len(df_cyc) == 0:
+            return None            
+            
         region = list(df_cyc.region.unique())[0]
+        
+        # something went wrong in the order of the hazard maps, correct that here. 
         df_cyc = df_cyc.rename({'val_Cyc_rp100':'val_Cyc_rp500',
                                 'val_Cyc_rp500':'val_Cyc_rp1000', 
                                 'val_Cyc_rp1000':'val_Cyc_rp100',
                                 'length_Cyc_rp100':'length_Cyc_rp500',
                                 'length_Cyc_rp500':'length_Cyc_rp1000', 
                                 'length_Cyc_rp1000':'length_Cyc_rp100'}, axis='columns')
-        df_tree = pandas.read_feather([x for x in all_tree_cov if os.path.split(cycfil)[1][:-7] in x][0])
+        df_tree = pandas.read_feather([x for x in all_tree_cov if os.path.split(file)[1][:-7] in x][0])
         df_cyc = df_cyc.merge(df_tree[['osm_id','Tree_Dens']],left_on='osm_id',right_on='osm_id')
         df_cyc = df_cyc.loc[~(df_cyc['Tree_Dens'] <= 0)]
+        
+        # estimate tree density
         df_cyc['Tree_Dens'].loc[(df_cyc['Tree_Dens'] >= 10000)] = 10000
+        
+        # add failure probability
         df_cyc['fail_prob'] = df_cyc.Tree_Dens/10000
         df_output = pandas.DataFrame(columns=events,index=df_cyc.index).fillna(0)
         df_cyc = pandas.concat([df_cyc,df_output],axis=1)
         tqdm.pandas(desc=region)
 
+        # get actual cyclone damage
         if not rail:
             df_cyc = df_cyc.progress_apply(lambda x: road_cyclone(x,events,param_values),axis=1)
         else:
             df_cyc = df_cyc.progress_apply(lambda x: rail_cyclone(x,events,param_values),axis=1)
-            
+
+
+        # And save the outputs to a .csv file.
+        if not rail:
+            df_cyc.groupby(['infra_type','country','continent','region'])[events].agg(sum_tuples).to_csv(os.path.join(data_path,'Cyc_impacts','{}.csv'.format(region)))
+        else:
+            df_cyc.groupby(['infra_type','country','continent','region'])[events].agg(sum_tuples).to_csv(os.path.join(data_path,'Cyc_impacts_rail','{}.csv'.format(region)))
+
+
+        # and return if desired.
         return df_cyc.groupby(['infra_type','country','continent','region'])[events].agg(sum_tuples)
-    
-    else:
-        return None
+
+    except Exception as e:
+        print('Failed to finish {} because of {}!'.format(file,e))
+
 
 def regional_earthquake(file,data_path,global_costs,paved_ratios,events,wbreg_lookup,rail=False):
     """
@@ -773,19 +838,25 @@ def regional_earthquake(file,data_path,global_costs,paved_ratios,events,wbreg_lo
         
     """    
     try:
+        # open earthquake intersection file for the region
         df = pandas.read_feather(file)
         val_cols = [x for x in list(df.columns) if 'val' in x]
         region = list(df.region.unique())[0]
+        
+        # remove all rows where PGA is below 0.092. We assume nothing will happens with these values.
         df = df.loc[~(df[val_cols] < 92).all(axis=1)]        
         
+        # stop here if it means that actually nothing is being affected.
         if len(df) == 0:
             print('No shaked assets in {}'.format(region))
             return None
         
+        # if we already did the damage calculations, stop right here.
         if os.path.exists(os.path.join(data_path,'EQ_impacts','{}.csv'.format(region))):
             return None
     
         if len(df) > 0:
+            # something went wrong in the order of the hazard maps, correct that here. 
             df = df.rename({'val_EQ_rp250':'val_EQ_rp475',
                                         'val_EQ_rp475':'val_EQ_rp1500', 
                                         'val_EQ_rp975':'val_EQ_rp250',
@@ -796,11 +867,14 @@ def regional_earthquake(file,data_path,global_costs,paved_ratios,events,wbreg_lo
                                         'length_EQ_rp975':'length_EQ_rp250',
                                         'length_EQ_rp1500':'length_EQ_rp2475',
                                         'length_EQ_rp2475':'length_EQ_rp975'}, axis='columns')
+            
+            # get the liquefaction files for either road or railway assets for the region       
             if not rail:
                 df_liq = pandas.read_feather(os.path.join(data_path,'liquefaction_road','{}_liq.ft'.format(region)))
             else:
                 df_liq = pandas.read_feather(os.path.join(data_path,'liquefaction_rail','{}_liq.ft'.format(region)))
-              
+             
+            # and merge liquefaction output with pga 
             df = df.merge(df_liq[['osm_id','liquefaction']],left_on='osm_id',right_on='osm_id')
             df = df.loc[~(df['liquefaction'] <= 1)]
             df = df.loc[~(df['liquefaction'] > 5)]
@@ -808,13 +882,16 @@ def regional_earthquake(file,data_path,global_costs,paved_ratios,events,wbreg_lo
                 print('No liquid roads in {}'.format(region))
                 return None            
   
+        # set base values for fragility table.
         sorted_all = [[10,25,40],[20,40,60],[30,55,80],[40,70,100]]
         frag_tables = []
 
+        # load parameter values. We read them from an external file, to make sure we use the same set for all regions.
         if not rail:
             param_values = [numpy.fromfile(os.path.join(data_path,'input_data','param_values_eq.pkl'))[x:x+4] 
             for x in range(0, len(numpy.fromfile(os.path.join(data_path,'input_data','param_values.pkl'))), 4)]
-
+            
+            # create fragility table
             for sort_rand in sorted_all:
                 EQ_fragility = numpy.array([[0]+sort_rand+[100],[0,0]+sort_rand,[0,0,0]+sort_rand[:2],[0,0,0,0]+sort_rand[:1],[0,0,0,0,0]]).T
                 df_EQ_frag = pandas.DataFrame(EQ_fragility,columns=[5,4,3,2,1],index=[(0,92),(93,180),(181,340),(341,650),(651,5000)])
@@ -824,6 +901,7 @@ def regional_earthquake(file,data_path,global_costs,paved_ratios,events,wbreg_lo
             param_values = [numpy.fromfile(os.path.join(data_path,'input_data','param_values_eq_rail.pkl'))[x:x+3] 
                         for x in range(0, len(numpy.fromfile(os.path.join(data_path,'input_data','param_values_eq_rail.pkl'))), 3)]
 
+            # create fragility table
             for sort_rand in sorted_all:
                 EQ_fragility = numpy.array([[10]+sort_rand+[100],[0,10]+sort_rand,[0,0,10]+sort_rand[:2],[0,0,0,0]+sort_rand[:1],[0,0,0,0,0]]).T
                 df_EQ_frag = pandas.DataFrame(EQ_fragility,columns=[5,4,3,2,1],index=[(0,92),(93,180),(181,340),(341,650),(651,5000)])
@@ -831,6 +909,7 @@ def regional_earthquake(file,data_path,global_costs,paved_ratios,events,wbreg_lo
                 frag_tables.append(frag_dict)
     
         try:
+            # remove all bridge assets from the calculation. We calculate those damages separately.
             if not rail:
                 all_bridge_files = [os.path.join(data_path,'bridges_osm_road',x) for x in os.listdir(os.path.join(data_path,'bridges_osm_road'))]
             else:
@@ -843,6 +922,7 @@ def regional_earthquake(file,data_path,global_costs,paved_ratios,events,wbreg_lo
         df_output = pandas.DataFrame(columns=events,index=df.index).fillna(0)
         df = pandas.concat([df,df_output],axis=1)
     
+        # And we finally made it to the damage calculation!
         tqdm.pandas(desc = region)
         if not rail:
             df = df.progress_apply(lambda x: road_earthquake(x,global_costs,paved_ratios,frag_tables,events,wbreg_lookup,param_values,val_cols),axis=1)
@@ -851,21 +931,29 @@ def regional_earthquake(file,data_path,global_costs,paved_ratios,events,wbreg_lo
 
         df.reset_index(inplace=True,drop=True)
         
-        df.groupby(['infra_type','country','continent','region'])[events].agg(sum_tuples).to_csv(os.path.join(data_path,'EQ_impacts','{}.csv'.format(region)))
-        
+        # And save the outputs to a .csv file.
+        if not rail:
+            df.groupby(['infra_type','country','continent','region'])[events].agg(sum_tuples).to_csv(os.path.join(data_path,'EQ_impacts','{}.csv'.format(region)))
+        else:
+            df.groupby(['infra_type','country','continent','region'])[events].agg(sum_tuples).to_csv(os.path.join(data_path,'EQ_impacts_rail','{}.csv'.format(region)))
+                    
+        # and return if desired.
         return df.groupby(['infra_type','country','continent','region'])[events].agg(sum_tuples)
 
     except Exception as e:
         print('Failed to finish {} because of {}!'.format(file,e))
             
 
-def regional_flood(file,data_path,global_costs,paved_ratios,flood_curve_paved,flood_curve_unpaved,events,wbreg_lookup,rail=False):
+def regional_flood(file,hzd,data_path,global_costs,paved_ratios,flood_curve_paved,flood_curve_unpaved,events,wbreg_lookup,rail=False):
     """
     Function to estimate the summary statistics of all flood damages in a region to road assets
     
     Arguments:
         *file* : path to the .feather file with all bridges of a region.
         
+        *hzd* : abbrevation of the hazard we want to intersect.  **FU** for river flooding, 
+        **PU** for surface flooding and **CF** for coastal flooding.
+
         *data_path* : file path to location of all data.
         
         *global_costs* : A pandas DataFrame with the total cost for different roads in different World Bank regions. These values 
@@ -889,20 +977,26 @@ def regional_flood(file,data_path,global_costs,paved_ratios,flood_curve_paved,fl
         *DataFrame* : a pandas DataFrame with summary damage statistics for the loaded region.
     """ 
     try:
+        # open flood intersection file for the region
         df = pandas.read_feather(file)
         region = df.region.unique()[0]
         val_cols = [x for x in list(df.columns) if 'val' in x]
+        
+        # remove all rows where the flood intersection value is zero (i.e. no inundation)
         df = df.loc[~(df[val_cols] == 0).all(axis=1)]
         
+        # if this means we have no rows left, stop right here.
         if len(df) == 0:
             print('No flooded roads in {}'.format(region))
             return None
     
+        # load parameter values. We read them from an external file, to make sure we use the same set for all regions.
         try:
             if not rail:
                 param_values = [numpy.fromfile(os.path.join(data_path,'input_data','param_values.pkl'))[x:x+4] 
                     for x in range(0, len(numpy.fromfile(os.path.join(data_path,'input_data','param_values.pkl'))), 4)]
-
+                
+                # remove all bridge assets from the calculation. We calculate those damages separately.
                 all_bridge_files = [os.path.join(data_path,'bridges_osm_road',x) for x in os.listdir(os.path.join(data_path,'bridges_osm_road'))]
                 bridges = list(pandas.read_feather([x for x in all_bridge_files if os.path.split(file)[1][:-6] in x][0])['osm_id'])
                 df = df.loc[~(df['osm_id'].isin(bridges))]
@@ -910,6 +1004,7 @@ def regional_flood(file,data_path,global_costs,paved_ratios,flood_curve_paved,fl
                 param_values = [numpy.fromfile(os.path.join(data_path,'input_data','param_values_fl_rail.pkl'))[x:x+3] 
                     for x in range(0, len(numpy.fromfile(os.path.join(data_path,'input_data','param_values_fl_rail.pkl'))), 3)]
 
+                # remove all bridge assets from the calculation. We calculate those damages separately.
                 all_bridge_files = [os.path.join(data_path,'bridges_osm_rail',x) for x in os.listdir(os.path.join(data_path,'bridges_osm_rail'))]
                 bridges = list(pandas.read_feather([x for x in all_bridge_files if os.path.split(file)[1][:-6] in x][0])['osm_id'])
                 df = df.loc[~(df['osm_id'].isin(bridges))]                
@@ -919,11 +1014,13 @@ def regional_flood(file,data_path,global_costs,paved_ratios,flood_curve_paved,fl
         df_output = pandas.DataFrame(columns=events,index=df.index).fillna(0)
         df = pandas.concat([df,df_output],axis=1)
     
+        # And we finally made it to the damage calculation!
         tqdm.pandas(desc = region)
         if not rail:
             df = df.progress_apply(lambda x: road_flood(x,global_costs,paved_ratios,
                                                          flood_curve_paved,flood_curve_unpaved,events,wbreg_lookup,param_values,val_cols),axis=1)
         else:
+            # for railway we just load the curves seperately.
             curve = pandas.read_excel(os.path.join(data_path,'input_data','Costs_curves.xlsx'),usecols=[1,2,3,4,5,6,7,8],
                                  sheet_name='Flooding',index_col=[0],skipfooter=9,header = [0,1])
             curve.columns = curve.columns.droplevel(0)
@@ -931,9 +1028,15 @@ def regional_flood(file,data_path,global_costs,paved_ratios,flood_curve_paved,fl
             df = df.progress_apply(lambda x: rail_flood(x,
                                                     curve,events,param_values,val_cols,wbreg_lookup),axis=1)
             
-    
+        # And save the outputs to a .csv file.
+        if not rail:
+            df.groupby(['infra_type','country','continent','region'])[events].agg(sum_tuples).to_csv(os.path.join(data_path,'{}_impacts'.format(hzd),'{}.csv'.format(region)))
+        else:
+            df.groupby(['infra_type','country','continent','region'])[events].agg(sum_tuples).to_csv(os.path.join(data_path,'{}_impacts_rail'.format(hzd),'{}.csv'.format(region)))
+            
         df.reset_index(inplace=True,drop=True)
         return df.groupby(['infra_type','country','continent','region'])[events].agg(sum_tuples)
-    except:
-        print('{} failed'.format(file))
+
+    except Exception as e:
+        print('Failed to finish {} because of {}!'.format(file,e))
 

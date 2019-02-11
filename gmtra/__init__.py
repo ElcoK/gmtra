@@ -14,4 +14,4 @@ try:
 except Exception:
     __version__ = 'unknown'
     
-__all__ = ['utils','preprocessing','fetch','hazard','exposure','losses','sensitivity','parallel','summary']
+__all__ = ['utils','preprocessing','fetch','hazard','exposure','damage','sensitivity','parallel','summary']
