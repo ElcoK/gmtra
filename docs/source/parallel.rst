@@ -22,6 +22,8 @@
 
 .. autofunction:: gmtra.parallel.flood_damage
 
+.. autofunction:: gmtra.parallel.bridge_sensitivity
+
 .. autofunction:: gmtra.parallel.cyclone_sensitivity
 
 .. autofunction:: gmtra.parallel.earthquake_sensitivity

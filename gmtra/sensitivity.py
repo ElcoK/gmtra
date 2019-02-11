@@ -11,7 +11,7 @@ import pandas
 import numpy
 import tqdm
 
-from gmtra.utils import sum_tuples,square_m2_cost_range,monetary_risk,sensitivity_risk
+from gmtra.utils import sum_tuples,square_m2_cost_range,sensitivity_risk
 from gmtra.damage import road_flood,rail_flood,road_cyclone,rail_cyclone,road_earthquake,rail_earthquake,road_bridge_earthquake,road_bridge_flood_cyclone,rail_bridge_earthquake,rail_bridge_flood_cyclone
     
 def regional_bridge(file,data_path,param_values,income_lookup,eq_curve,design_tables,depth_threshs,wind_threshs,rail=False):

@@ -258,13 +258,26 @@ def bridge_damage(rail=False):
     depth_threshs = numpy.array([[700,600,500],[600,500,400],[500,400,300],[400,300,200]])
     wind_threshs = numpy.array([[400,375,350],[375,350,325],[350,325,300],[350,300,275]])    
 
-    # create the set of parameters for the sensitivity analysis.
-    problem = {
-              'num_vars': 5,
-              'names': ['width', '4l_2l','2l_1l','cost','fragility'],
-              'bounds': [[2.7,4.6],[0,1],[0,1],[0,1],[1,4]]}
+    if not rail:
+        # create the set of parameters for the sensitivity analysis.
+        problem = {
+                  'num_vars': 5,
+                  'names': ['width', '4l_2l','2l_1l','cost','fragility'],
+                  'bounds': [[2.7,4.6],[0,1],[0,1],[0,1],[1,4]]}
+        
+        # Generate samples
+        param_values = morris.sample(problem, 10, num_levels=4, grid_jump=2,local_optimization =True)
+
+    else:
+         # create the set of parameters for the sensitivity analysis.
+        problem = {
+                  'num_vars': 4,
+                  'names': ['width','2l_1l','cost','fragility'],
+                  'bounds': [[3,5],[0,1],[0,1],[1,4]]}
+        
+        # Generate samples
+        param_values = morris.sample(problem, 10, num_levels=4, grid_jump=2,local_optimization =True)
     
-    param_values = morris.sample(problem, 10, num_levels=4, grid_jump=2,local_optimization =True)
     
     # prepare multiprocessing
     param_list = [param_values]*len(all_files)
@@ -458,6 +471,83 @@ def flood_damage(hazard,rail=False):
        pool.starmap(damage.regional_flood,zip(all_files,data_paths,pav_cost_list,pav_rat_list,
                                                           cur_pav_list,cur_unpav_list,events_list,wbreg_list,rail_list),chunksize=1) 
     
+def bridge_sensitivity(rail=False,region_count=1000):
+    """
+    Function to calculate the damage to bridges for all regions and all hazards.
+    
+    Optional Arguments:
+        *rail* : Default is **False**. Set to **True** if you would like to 
+        intersect the railway assets in a region.
+        
+        *region_count* : Default is **1000**. Change this number if you want to include a different amount of regions.
+    """ 
+    # set data path
+    data_path  = load_config()['paths']['data']
+
+    # get a list of all regions for which we can estimate the damages
+    if not rail:
+        all_files = [os.path.join(data_path,'bridges_osm_road',x) for x in os.listdir(os.path.join(data_path,'bridges_osm_road'))]
+    else:
+        all_files = [os.path.join(data_path,'bridges_osm_rail',x) for x in os.listdir(os.path.join(data_path,'bridges_osm_rail'))]
+    
+    # load csv with income group data and assign income group to regions
+    incomegroups = pandas.read_csv(os.path.join(data_path,'input_data','incomegroups_2018.csv'),index_col=[0])
+    income_lookup = dict(zip(incomegroups.CountryCode,incomegroups.GroupCode))
+    
+    # load earthquake curves
+    eq_curve = pandas.read_excel(os.path.join(data_path,'input_data','Costs_curves.xlsx'),sheet_name='bridge_curves',usecols=5)
+    
+    # create design standard table for floods and cyclones
+    design_tables = numpy.array([[[1/200,1/200,1/200],[1/100,1/100,1/100],[1/50,1/50,1/50]],
+                    [[1/100,1/100,1/100],[1/50,1/50,1/50],[1/20,1/20,1/20]],
+                    [[1/50,1/50,1/50],[1/20,1/20,1/20],[1/10,1/10,1/10]]])
+    
+    # and specify the damage thresholds.
+    depth_threshs = numpy.array([[700,600,500],[600,500,400],[500,400,300],[400,300,200]])
+    wind_threshs = numpy.array([[400,375,350],[375,350,325],[350,325,300],[350,300,275]])    
+    
+    if not rail:
+        # create the set of parameters for the sensitivity analysis.
+        problem = {
+                  'num_vars': 5,
+                  'names': ['width', '4l_2l','2l_1l','cost','fragility'],
+                  'bounds': [[2.7,4.6],[0,1],[0,1],[0,1],[1,4]]}
+        
+        # Generate samples and save them, to be used in uncertainty and sensitivity analysis of results
+        param_values = morris.sample(problem, 10, num_levels=4, grid_jump=2,local_optimization =True)
+        param_values.tofile(os.path.join(data_path,'input_data','param_values_bridge_road.pkl'))
+
+    else:
+         # create the set of parameters for the sensitivity analysis.
+        problem = {
+                  'num_vars': 4,
+                  'names': ['width','2l_1l','cost','fragility'],
+                  'bounds': [[3,5],[0,1],[0,1],[1,4]]}
+        
+        # Generate samples and save them, to be used in uncertainty and sensitivity analysis of results
+        param_values = morris.sample(problem, 10, num_levels=4, grid_jump=2,local_optimization =True)
+        param_values.tofile(os.path.join(data_path,'input_data','param_values_bridge_railway.pkl'))
+    
+    # prepare multiprocessing
+    param_list = [param_values]*len(all_files)
+    data_p_list = [data_path]*len(all_files)
+    income_list = [income_lookup]*len(all_files)
+    eq_curve_list = [eq_curve]*len(all_files)
+    design_list = [design_tables]*len(all_files)
+    depth_list = [depth_threshs]*len(all_files)
+    wind_list = [wind_threshs]*len(all_files)
+    rail_list = [rail]*len(all_files)
+
+    # run bridge damage analysis parallel
+    with Pool(cpu_count()-1) as pool: 
+        collect_risks = pool.starmap(damage.regional_bridge,zip(all_files,data_p_list,param_list,income_list,eq_curve_list,design_list,depth_list,wind_list,rail_list),chunksize=1) 
+    
+    # and save all output.
+    if not rail:
+        pandas.concat(collect_risks).to_csv(os.path.join(data_path,'summarized','sa_bridge_road.csv'))
+    else:
+        pandas.concat(collect_risks).to_csv(os.path.join(data_path,'summarized','sa_bridge_rail.csv'))
+        
 
 def cyclone_sensitivity(rail=False,region_count=1000):  
     """
@@ -665,6 +755,6 @@ def flood_sensitivity(hazard,rail=False,region_count=1000):
 
         else:
             collect_output = pool.starmap(sensitivity.regional_flood,zip(all_files,hazards,data_paths,cur_list,events_list,wbreg_list),chunksize=1) 
-            pandas.concat(collect_output).to_csv(os.path.join(data_path,'summarized','sa_{}_rai.csv').format(hazard))
+            pandas.concat(collect_output).to_csv(os.path.join(data_path,'summarized','sa_{}_rail.csv').format(hazard))
 
        
