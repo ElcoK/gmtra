@@ -1,0 +1,49 @@
+flood,road_type,wbincome,share_pos_BCR,Net_Benefit,avg_pos_BCR,avg_BCR
+All Flooding,primary,High Income Countries,0.0,0,0.0,0.2974054522778897
+All Flooding,primary,Lower Income Countries,0.0,0,0.0,2.3028729060807764
+All Flooding,primary,Lower Middle Income Countries,0.37756957,87,1.2318091435448568,1.834377211968075
+All Flooding,primary,Upper Middle Income Countries,0.0,0,0.0,3.5367477457791794
+All Flooding,secondary,High Income Countries,0.0,0,0.0,0.3575648679127821
+All Flooding,secondary,Lower Income Countries,0.61349693,2,1.7895287596180154,3.915898993297599
+All Flooding,secondary,Lower Middle Income Countries,1.19965724,82,1.463942428497161,2.241174954877904
+All Flooding,secondary,Upper Middle Income Countries,0.06113217,0,1.4320790473126102,3.824961615423989
+All Flooding,tertiary,High Income Countries,0.0,0,0.0,0.4063796600237414
+All Flooding,tertiary,Lower Income Countries,4.30216802,73,2.1465776950783724,4.801053113156437
+All Flooding,tertiary,Lower Middle Income Countries,9.70649665,122,1.7757456735071797,2.844466214973539
+All Flooding,tertiary,Upper Middle Income Countries,0.53887606,41,2.063997132236926,1.5240225354757535
+Coastal Flooding,primary,High Income Countries,25.94819611,652,7.82890438177353,0.2974054522778897
+Coastal Flooding,primary,Lower Income Countries,69.76744186,95,7.533888284013028,2.3028729060807764
+Coastal Flooding,primary,Lower Middle Income Countries,55.32646048,2252,8.45280379356322,1.834377211968075
+Coastal Flooding,primary,Upper Middle Income Countries,45.09018036,2265,6.152076793126964,3.5367477457791794
+Coastal Flooding,secondary,High Income Countries,27.78568042,162,8.218997586705619,0.3575648679127821
+Coastal Flooding,secondary,Lower Income Countries,77.77777778,30,8.527311152045575,3.915898993297599
+Coastal Flooding,secondary,Lower Middle Income Countries,58.25747724,487,9.011310399876924,2.241174954877904
+Coastal Flooding,secondary,Upper Middle Income Countries,50.57692308,347,6.635715690435177,3.824961615423989
+Coastal Flooding,tertiary,High Income Countries,11.81353768,31,4.715912759481658,0.4063796600237414
+Coastal Flooding,tertiary,Lower Income Countries,40.8,5,5.842137228507884,4.801053113156437
+Coastal Flooding,tertiary,Lower Middle Income Countries,36.76386507,91,5.494582850426067,2.844466214973539
+Coastal Flooding,tertiary,Upper Middle Income Countries,32.82747604,613,6.834639510825505,1.5240225354757535
+River Flooding,primary,High Income Countries,7.14519472,184,3.108676294950909,0.2974054522778897
+River Flooding,primary,Lower Income Countries,43.72093023,320,4.880878821246805,2.3028729060807764
+River Flooding,primary,Lower Middle Income Countries,34.23456339,1210,5.027386278688866,1.834377211968075
+River Flooding,primary,Upper Middle Income Countries,59.08809208,10081,5.731645269204746,3.5367477457791794
+River Flooding,secondary,High Income Countries,8.21359882,43,3.378963434448828,0.3575648679127821
+River Flooding,secondary,Lower Income Countries,55.76484018,59,6.68525517061955,3.915898993297599
+River Flooding,secondary,Lower Middle Income Countries,37.67274184,171,5.642119834199828,2.241174954877904
+River Flooding,secondary,Upper Middle Income Countries,61.31852759,1523,6.028241241039605,3.824961615423989
+River Flooding,tertiary,High Income Countries,7.56636311,157,4.92701651548886,0.4063796600237414
+River Flooding,tertiary,Lower Income Countries,71.02229055,244,6.651049995345987,4.801053113156437
+River Flooding,tertiary,Lower Middle Income Countries,45.987977,334,6.037643124224429,2.844466214973539
+River Flooding,tertiary,Upper Middle Income Countries,28.11703425,398,5.146160218133955,1.5240225354757535
+Surface Flooding,primary,High Income Countries,9.52246663,11,2.4478269616205597,-inf
+Surface Flooding,primary,Lower Income Countries,63.52288488,140,4.318915883083491,2.9802161690870355
+Surface Flooding,primary,Lower Middle Income Countries,78.60005726,2064,6.217349737353236,5.0955706000000855
+Surface Flooding,primary,Upper Middle Income Countries,85.65915092,7363,6.696423991808866,6.00126825488779
+Surface Flooding,secondary,High Income Countries,21.18336589,4,2.227019269218962,-inf
+Surface Flooding,secondary,Lower Income Countries,72.45033113,37,6.293815706112719,4.884533496909585
+Surface Flooding,secondary,Lower Middle Income Countries,79.08544628,346,7.114013476411547,5.964210288356272
+Surface Flooding,secondary,Upper Middle Income Countries,84.62580844,1153,7.362085848823385,6.626046345467852
+Surface Flooding,tertiary,High Income Countries,51.62388685,435,1.578058388054011,1.1638687837730592
+Surface Flooding,tertiary,Lower Income Countries,80.19734604,177,7.588903036869169,6.221432218482745
+Surface Flooding,tertiary,Lower Middle Income Countries,82.71231957,1155,7.849975008434001,6.598344855055137
+Surface Flooding,tertiary,Upper Middle Income Countries,63.42194297,595,6.479802495784016,4.30776029758218

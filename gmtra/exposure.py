@@ -14,16 +14,15 @@ pandas.options.mode.chained_assignment = None
 
 from gmtra.utils import load_config,total_length_risk,exposed_length_risk
 
-from pathos.multiprocessing import Pool,cpu_count
 pandas.set_option('chained_assignment',None)
 
 
-def regional_roads(region,prot_lookup,data_path):
+def regional_roads(n,prot_lookup,data_path):
     """
     Function to get summarized exposure values for each region for all road assets.
     
     Arguments:
-        *region* : unique ID of the region for which we want to get exposure statistics.
+        *n* : the index ID of a region in the specified shapefile with all the regions.
         
         *prot_lookup* : dictionary with dike design standards for a region.
         
@@ -32,12 +31,23 @@ def regional_roads(region,prot_lookup,data_path):
     Returns:
         *dataframe* : a pandas DataFrame with exposure statistics.
     """
-    try:
-        print('{} started!'.format(region[3]))
-        # load ID and income group for the region
-        ID = region[3]
-        wbincome = region[14]
 
+    # specify the file path where all data is located.
+    data_path = load_config()['paths']['data']
+       
+    # load shapefile with unique information for each region
+    global_regions = geopandas.read_file(os.path.join(data_path,'input_data','global_regions_v2.shp'))
+    
+    # grab the row of the region from the global region shapefile
+    region = global_regions.iloc[n]
+
+    print('{} started!'.format(region.GID_2))
+
+    try:
+        # load ID and income group for the region
+        ID = region.GID_2
+        wbincome = region.wbincome
+        
         # specify all unique hazard abbrevations
         hazards = ['EQ','Cyc','PU','FU','CF']
         collect_risks = []
@@ -142,7 +152,7 @@ def regional_roads(region,prot_lookup,data_path):
                 bins = [-1,25,50,100,200,2000]
             
             # calculate the annual kilometers of total possible roads for each asset 
-            reg_stats[hazard] = reg_stats.apply(lambda x: total_length_risk(x,hazard,RPS),axis=1)        
+            reg_stats[hazard] = reg_stats.apply(lambda x: total_length_risk(x,RPS),axis=1)        
 
             # bin this into the four risk categories, as specified in the Supplementary Materials of Koks et al. (2019)
             for event in event_list:
@@ -175,14 +185,14 @@ def regional_roads(region,prot_lookup,data_path):
         return (pandas.concat(collect_risks,axis=1).fillna(0)) 
 
     except Exception as e:
-        print('Failed to finish {} because of {}!'.format(region[3],e))
+        print('Failed to finish {} because of {}!'.format(region.GID_2,e))
 
-def regional_railway(region,prot_lookup,data_path):
+def regional_railway(n,prot_lookup,data_path):
     """
     Function to get summarized exposure values for each region for all railway assets.
     
     Arguments:
-        *region* : unique ID of the region for which we want to get exposure statistics.
+        *n* : the index ID of a region in the specified shapefile with all the regions.
         
         *prot_lookup* : dictionary with dike design standards for a region.
         
@@ -191,11 +201,21 @@ def regional_railway(region,prot_lookup,data_path):
     Returns:
         *dataframe* : a pandas DataFrame with exposure statistics.
     """
+    # specify the file path where all data is located.
+    data_path = load_config()['paths']['data']
+       
+    # load shapefile with unique information for each region
+    global_regions = geopandas.read_file(os.path.join(data_path,'input_data','global_regions_v2.shp'))
+    
+    # grab the row of the region from the global region shapefile
+    region = global_regions.iloc[n]
+
+    print('{} started!'.format(region.GID_2))
+ 
     try:
-        print('{} started!'.format(region[3]))
         # load ID and income group for the region
-        ID = region[3]
-        wbincome = region[14]
+        ID = region.GID_2
+        wbincome = region.wbincome
 
         # specify all unique hazard abbrevations
         hazards = ['EQ','Cyc','PU','FU','CF']
@@ -295,7 +315,7 @@ def regional_railway(region,prot_lookup,data_path):
                 bins = [-1,25,50,100,200,2000]
   
             # calculate the annual kilometers of total possible roads for each asset 
-            reg_stats[hazard] = reg_stats.apply(lambda x: total_length_risk(x,hazard,RPS),axis=1)        
+            reg_stats[hazard] = reg_stats.apply(lambda x: total_length_risk(x,RPS),axis=1)        
 
             # bin this into the four risk categories, as specified in the Supplementary Materials of Koks et al. (2019)
             for event in event_list:
@@ -327,5 +347,5 @@ def regional_railway(region,prot_lookup,data_path):
         # return results to be saved in one big file for all regions combined
         return (pandas.concat(collect_risks,axis=1).fillna(0))
 
-    except:
-        print('{} failed'.format(region[3]))
+    except Exception as e:
+        print('Failed to finish {} because of {}!'.format(region.GID_2,e))

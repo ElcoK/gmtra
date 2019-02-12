@@ -21,44 +21,51 @@ from geopy.distance import vincenty
 from gmtra.utils import load_config,create_folder_lookup,map_roads,line_length
 from gmtra.fetch import bridges
 
-def region_bridges(x):
+def region_bridges(n):
     """
     This function will extract all bridges from OpenStreetMap for the specified region.
     
     Arguments:
-        *x* : a row in a geopandas GeoDataFrame with characteristics of the region for which we are extracting the bridges.
+        *n* : the index ID of a region in the specified shapefile with all the regions.
             
     Returns:
         *GeoDataFrame* : A geopandas GeoDataFrame with all bridges in a region. Will also save this to a .csv file.
                       
     """
-    # get the name of the region from the row
-    region = x[3]
-    try:
-        data_path = load_config()['paths']['data']
-            
-        # extract bridges from OpenStreetMAp
-        bridges_osm = bridges(data_path,region,regional=True)
-
-        # estimate length of each bridges in meters
-        bridges_osm['length'] = bridges_osm.geometry.apply(line_length)
-        bridges_osm['length'] = bridges_osm['length']*1000
-        road_dict = map_roads()
-        
-        # map roads to primary, secondary, tertiary and other roads.
-        bridges_osm['road_type'] = bridges_osm.road_type.apply(lambda y: road_dict[y])        
-        bridges_osm['region'] = region
-        bridges_osm['country'] = region[:3]        
-        
-        # save to .csv
-        bridges_osm.to_csv(os.path.join(data_path,'bridges_osm','{}.csv'.format(region)))
-        
-        print('{} finished!'.format(region))
-        
-        return bridges_osm
+   # specify the file path where all data is located.
+    data_path = load_config()['paths']['data']
+       
+    # load shapefile with unique information for each region
+    global_regions = geopandas.read_file(os.path.join(data_path,'input_data','global_regions_v2.shp'))
     
-    except Exception as e:
-        print('Failed to finish {} because of {}!'.format(region,e))
+    # grab the row of the region from the global region shapefile
+    x = global_regions.iloc[n]
+    
+    # get name of the region 
+    region = x.GID_2
+            
+    # extract bridges from OpenStreetMAp
+    bridges_osm = bridges(data_path,region,regional=True)
+
+    # estimate length of each bridges in meters
+    bridges_osm['length'] = bridges_osm.geometry.apply(line_length)
+    bridges_osm['length'] = bridges_osm['length']*1000
+    road_dict = map_roads()
+    
+    # map roads to primary, secondary, tertiary and other roads.
+    bridges_osm['road_type'] = bridges_osm.road_type.apply(lambda y: road_dict[y])        
+    bridges_osm['region'] = region
+    bridges_osm['country'] = region[:3]        
+    
+    # save to .csv
+    bridges_osm.to_csv(os.path.join(data_path,'bridges_osm','{}.csv'.format(region)))
+    
+    print('{} finished!'.format(region))
+    
+    return bridges_osm
+    
+#    except Exception as e:
+#        print('Failed to finish {} because of {}!'.format(region,e))
 
 def remove_tiny_shapes(x,regionalized=False):
     """This function will remove the small shapes of multipolygons. Will reduce the size of the file.
@@ -152,7 +159,7 @@ def global_shapefiles(regionalized=False):
     if regionalized == False:
         
         # load country file
-        country_gadm_path = os.path.join(data_path,'GADM','gadm34_0.shp')
+        country_gadm_path = os.path.join(data_path,'GADM36','gadm36_0.shp')
         gadm_level0 = geopandas.read_file(country_gadm_path)
     
         # remove antarctica, no roads there anyways
@@ -185,7 +192,7 @@ def global_shapefiles(regionalized=False):
             return None
         
     # load region file
-        region_gadm_path = os.path.join(data_path,'GADM','gadm34_1.shp')
+        region_gadm_path = os.path.join(data_path,'GADM36','gadm36_2.shp')
         gadm_level1 = geopandas.read_file(region_gadm_path)
        
         # remove tiny shapes to reduce size substantially

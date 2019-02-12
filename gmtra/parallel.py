@@ -5,7 +5,7 @@ Functions to run all regional code parallel.
 
 Copyright (C) 2019 Elco Koks. All versions released under the GNU Affero General Public License v3.0 license.
 """
-
+import sys
 import os
 import numpy
 import pandas
@@ -20,6 +20,11 @@ import gmtra.damage as damage
 from gmtra.hazard import region_intersection,get_tree_density,get_liquefaction_region
 from gmtra.preprocessing import region_bridges,merge_SSBN_maps
 from gmtra.exposure import regional_roads,regional_railway
+
+import warnings
+
+if not sys.warnoptions:
+    warnings.simplefilter("ignore")
 
 def bridge_extraction(save_all=False):
     """
@@ -39,7 +44,7 @@ def bridge_extraction(save_all=False):
 
     # run the bridge extraction for all regions
     with Pool(cpu_count()-1) as pool: 
-        collect_bridges = pool.map(region_bridges,list(global_regions.to_records()),chunksize=1) 
+        collect_bridges = pool.map(region_bridges,list(global_regions.index),chunksize=1) 
 
     # save all bridges in one file.
     if save_all:
@@ -89,14 +94,12 @@ def tree_values(rail=False):
     
     if not rail:
         global_regions = global_regions.loc[(global_regions.GID_2.isin([x[:-10] for x in os.listdir(os.path.join(data_path,'road_stats'))]))]
-        global_regions = global_regions.loc[~(global_regions.GID_2.isin([(x.split('.')[0]) for x in os.listdir(os.path.join(data_path,'tree_cover_road'))]))]     
     else:
         global_regions = global_regions.loc[(global_regions.GID_2.isin([x[:-10] for x in os.listdir(os.path.join(data_path,'railway_stats'))]))]
-        global_regions = global_regions.loc[~(global_regions.GID_2.isin([(x.split('.')[0]) for x in os.listdir(os.path.join(data_path,'tree_cover_rail'))]))]
 
     # run tree value extraction for all regions parallel
     with Pool(cpu_count()-1) as pool: 
-        pool.map(get_tree_density,list(global_regions.to_records()),chunksize=1) 
+        pool.map(get_tree_density,list(global_regions.index),chunksize=1) 
 
 
 def liquefaction_overlays(rail=False):
@@ -116,18 +119,13 @@ def liquefaction_overlays(rail=False):
     
     if not rail:
         global_regions = global_regions.loc[(global_regions.GID_2.isin([(x.split('.')[0]) for x in os.listdir(os.path.join(data_path,'region_osm'))]))]
-        global_regions = global_regions.loc[~(global_regions.GID_2.isin([(x.split('.')[0][:-4]) for x in os.listdir(os.path.join(data_path,'liquefaction_road'))]))]
     else:
         global_regions = global_regions.loc[(global_regions.GID_2.isin([(x.split('.')[0]) for x in os.listdir(os.path.join(data_path,'region_osm'))]))]
-        global_regions = global_regions.loc[~(global_regions.GID_2.isin([(x.split('.')[0][:-4]) for x in os.listdir(os.path.join(data_path,'liquefaction_rail'))]))]   
 
-    global_regions['Size'] = global_regions.area
-    global_regions = global_regions.sort_values(by='Size')
-    global_regions.drop(['Size'],inplace=True,axis=1)
 
     # run liquefaction intersection for all regions parallel
     with Pool(cpu_count()-1) as pool: 
-        pool.map(get_liquefaction_region,list(global_regions.to_records()),chunksize=1) 
+        pool.map(get_liquefaction_region,list(global_regions.index)[:4],chunksize=1) 
 
 def hazard_intersection(hzd,rail=False,from_=0,to_=46433):
     """
@@ -154,7 +152,6 @@ def hazard_intersection(hzd,rail=False,from_=0,to_=46433):
     
     # create lists for the parallelization
     hzds = [hzd]*int(to_)
-    Roads = [road]*int(to_)
     Railways = [railway]*int(to_)
 
     # set data path
@@ -177,7 +174,7 @@ def hazard_intersection(hzd,rail=False,from_=0,to_=46433):
 
     # run hazard intersections parallel
     with Pool(cpu_count()-1) as pool: 
-        pool.starmap(region_intersection,zip(regions,hzds,Roads,Railways),chunksize=1) 
+        pool.starmap(region_intersection,zip(regions,hzds,Railways),chunksize=1) 
 
 def exposure_analysis(rail=False): 
     """
@@ -206,7 +203,7 @@ def exposure_analysis(rail=False):
     prot_lookup = dict(zip(global_regions['GID_2'],global_regions['prot_stand']))
 
     # create lists for the parallelization
-    regions = list(global_regions.to_records())
+    regions = list(global_regions.index)
     prot_lookups = [prot_lookup]*len(regions)
     data_paths = [data_path]*len(regions)    
 
@@ -244,10 +241,10 @@ def bridge_damage(rail=False):
     
     # load csv with income group data and assign income group to regions
     incomegroups = pandas.read_csv(os.path.join(data_path,'input_data','incomegroups_2018.csv'),index_col=[0])
-    income_lookup = dict(zip(incomegroups.CountryCode,incomegroups.GroupCode))
+    income_lookup = dict(zip(incomegroups.index,incomegroups.GroupCode))
     
     # load earthquake curves
-    eq_curve = pandas.read_excel(os.path.join(data_path,'input_data','Costs_curves.xlsx'),sheet_name='bridge_curves',usecols=5)
+    eq_curve = pandas.read_excel(os.path.join(data_path,'input_data','Costs_curves.xlsx'),sheet_name='bridge_curves',usecols=[0,1,2,3,4],index_col=[0])
     
     # create design standard table for floods and cyclones
     design_tables = numpy.array([[[1/200,1/200,1/200],[1/100,1/100,1/100],[1/50,1/50,1/50]],
@@ -426,14 +423,14 @@ def flood_damage(hazard,rail=False):
     
     # import curves
     flood_curve_paved = pandas.read_excel(os.path.join(data_path,'input_data','Costs_curves.xlsx'),usecols=[1,2,3,4,5,6,7,8],
-                                 sheet_name='Flooding',index_col=[0],skipfooter=9,header = [0,1])
-    flood_curve_paved.columns = flood_curve_paved.columns.droplevel(0)
+                                 sheet_name='Flooding',index_col=[0],skiprows=1)
+    
     flood_curve_unpaved = pandas.read_excel(os.path.join(data_path,'input_data','Costs_curves.xlsx'),usecols=[11,12,13,14,15,16,17,18],
-                                 sheet_name='Flooding',index_col=[0],skipfooter=9,header = [0,1])
-    flood_curve_unpaved.columns = flood_curve_unpaved.columns.droplevel(0)
+                                 sheet_name='Flooding',index_col=[0],skiprows=1)
+    flood_curve_unpaved.columns = flood_curve_paved.columns
     
     # import cost values for different World Bank regions
-    global_costs = pandas.read_excel(os.path.join(data_path,'input_data','Costs_curves.xlsx'),usecols=7,header=0,index_col=0,skipfooter =45)
+    global_costs = pandas.read_excel(os.path.join(data_path,'input_data','Costs_curves.xlsx'),usecols=[0,1,2,3,4,5,6,7],header=0,index_col=0,skipfooter =45)
     global_costs.columns = ['SAS','SSA','MNA','EAP','LAC','ECA','YHI']
     
     # read csv file with information on paved and unpaved roads.
@@ -443,7 +440,7 @@ def flood_damage(hazard,rail=False):
       
     # Load all files for which we have intersection data
     if not rail:
-        all_files = [os.path.join(data_path,'output_{}_full'.format(hazard),x) for x in os.listdir(os.path.join(data_path,'output_{}_full'.format(hazard)))]
+        all_files = [os.path.join(data_path,'output_{}_full'.format(hazard),x) for x in os.listdir(os.path.join(data_path,'output_{}_full'.format(hazard)))][2350:2364]
     else:
         all_files = [os.path.join(data_path,'output_{}_rail_full'.format(hazard),x) for x in os.listdir(os.path.join(data_path,'output_{}_rail_full'.format(hazard)))]
         
@@ -457,6 +454,7 @@ def flood_damage(hazard,rail=False):
 
     # prepare multiprocessing
     data_paths = [data_path]*len(all_files)
+    hzd_list = [hazard]*len(all_files)
     pav_cost_list = [global_costs]*len(all_files)
     pav_rat_list = [paved_ratios]*len(all_files)
     cur_pav_list = [flood_curve_paved]*len(all_files)
@@ -467,8 +465,9 @@ def flood_damage(hazard,rail=False):
  
    # run flood damage analysis parallel 
     with Pool(cpu_count()-1) as pool: 
-       pool.starmap(damage.regional_flood,zip(all_files,data_paths,pav_cost_list,pav_rat_list,
+       pool.starmap(damage.regional_flood,zip(all_files,hzd_list,data_paths,pav_cost_list,pav_rat_list,
                                                           cur_pav_list,cur_unpav_list,events_list,wbreg_list,rail_list),chunksize=1) 
+        
     
 def bridge_sensitivity(rail=False,region_count=1000):
     """
@@ -491,10 +490,10 @@ def bridge_sensitivity(rail=False,region_count=1000):
     
     # load csv with income group data and assign income group to regions
     incomegroups = pandas.read_csv(os.path.join(data_path,'input_data','incomegroups_2018.csv'),index_col=[0])
-    income_lookup = dict(zip(incomegroups.CountryCode,incomegroups.GroupCode))
+    income_lookup = dict(zip(incomegroups.index,incomegroups.GroupCode))
     
     # load earthquake curves
-    eq_curve = pandas.read_excel(os.path.join(data_path,'input_data','Costs_curves.xlsx'),sheet_name='bridge_curves',usecols=5)
+    eq_curve = pandas.read_excel(os.path.join(data_path,'input_data','Costs_curves.xlsx'),sheet_name='bridge_curves',usecols=[0,1,2,3,4],index_col=[0])
     
     # create design standard table for floods and cyclones
     design_tables = numpy.array([[[1/200,1/200,1/200],[1/100,1/100,1/100],[1/50,1/50,1/50]],
@@ -539,7 +538,7 @@ def bridge_sensitivity(rail=False,region_count=1000):
 
     # run bridge damage analysis parallel
     with Pool(cpu_count()-1) as pool: 
-        collect_risks = pool.starmap(damage.regional_bridge,zip(all_files,data_p_list,param_list,income_list,eq_curve_list,design_list,depth_list,wind_list,rail_list),chunksize=1) 
+        collect_risks = pool.starmap(sensitivity.regional_bridge,zip(all_files,data_p_list,param_list,income_list,eq_curve_list,design_list,depth_list,wind_list,rail_list),chunksize=1) 
     
     # and save all output.
     if not rail:
@@ -636,8 +635,8 @@ def earthquake_sensitivity(rail=False,region_count=1000):
     global_countries['wbregion'].loc[global_countries.wbregion.isnull()] = 'YHI'
     wbreg_lookup = dict(zip(global_countries['ISO_3digit'],global_countries['wbregion']))
     
-    # import costs
-    global_costs = pandas.read_excel(os.path.join(data_path,'input_data','Costs_curves.xlsx'),usecols=7,header=0,index_col=0,skipfooter =45)
+    # import cost values for different World Bank regions
+    global_costs = pandas.read_excel(os.path.join(data_path,'input_data','Costs_curves.xlsx'),usecols=[0,1,2,3,4,5,6,7],header=0,index_col=0,skipfooter =45)
     global_costs.columns = ['SAS','SSA','MNA','EAP','LAC','ECA','YHI']
     
     # read csv file with information on paved and unpaved roads.
@@ -695,14 +694,15 @@ def flood_sensitivity(hazard,rail=False,region_count=1000):
     
     # import curves, costs and paved vs unpaved ratios
     if not rail:
+        # import curves
         flood_curve_paved = pandas.read_excel(os.path.join(data_path,'input_data','Costs_curves.xlsx'),usecols=[1,2,3,4,5,6,7,8],
                                      sheet_name='Flooding',index_col=[0],skiprows=1)
-        flood_curve_paved.columns = flood_curve_paved.columns.droplevel(0)
+        
         flood_curve_unpaved = pandas.read_excel(os.path.join(data_path,'input_data','Costs_curves.xlsx'),usecols=[11,12,13,14,15,16,17,18],
                                      sheet_name='Flooding',index_col=[0],skiprows=1)
-        flood_curve_unpaved.columns = flood_curve_unpaved.columns.droplevel(0)
+        flood_curve_unpaved.columns = flood_curve_paved.columns
         
-        global_costs = pandas.read_excel(os.path.join(data_path,'input_data','Costs_curves.xlsx'),usecols=7,header=0,index_col=0,skipfooter =45)
+        global_costs = pandas.read_excel(os.path.join(data_path,'input_data','Costs_curves.xlsx'),usecols=[0,1,2,3,4,5,6,7],header=0,index_col=0,skipfooter =45)
         global_costs.columns = ['SAS','SSA','MNA','EAP','LAC','ECA','YHI']
         
         paved_ratios = pandas.read_csv(os.path.join(data_path,'input_data','paved_ratios.csv'),index_col=[0,1])
@@ -732,28 +732,22 @@ def flood_sensitivity(hazard,rail=False,region_count=1000):
     data_paths = [data_path]*len(all_files)
     events_list = [events]*len(all_files)
     wbreg_list = [wbreg_lookup]*len(all_files)
-    
-    if not rail:
-        pav_cost_list = [global_costs]*len(all_files)
-        pav_rat_list = [paved_ratios]*len(all_files)
-        cur_pav_list = [flood_curve_paved]*len(all_files)
-        cur_unpav_list = [flood_curve_unpaved]*len(all_files)
-        hzd_list = [hazard]*len(all_files)
-    else:
-        data_paths = [data_path]*len(all_files)
-        hazards = [hazard]*len(all_files)
-        cur_list = [curve]*len(all_files)
-
+    pav_cost_list = [global_costs]*len(all_files)
+    pav_rat_list = [paved_ratios]*len(all_files)
+    cur_pav_list = [flood_curve_paved]*len(all_files)
+    cur_unpav_list = [flood_curve_unpaved]*len(all_files)
+    hzd_list = [hazard]*len(all_files)
     
    # run flood damage sensitivity analysis parallel and save outputs
     with Pool(cpu_count()-1) as pool: 
         if not rail:
-            collect_output = pool.starmap(sensitivity.regional_flood,zip(all_files,data_paths,pav_cost_list,pav_rat_list,
-                                                              cur_pav_list,cur_unpav_list,events_list,wbreg_list,hzd_list),chunksize=1) 
+            collect_output = pool.starmap(sensitivity.regional_flood,zip(all_files,hzd_list,data_paths,pav_cost_list,pav_rat_list,
+                                                              cur_pav_list,cur_unpav_list,events_list,wbreg_list),chunksize=1) 
             pandas.concat(collect_output).to_csv(os.path.join(data_path,'summarized','sa_{}_road.csv').format(hazard))
 
         else:
-            collect_output = pool.starmap(sensitivity.regional_flood,zip(all_files,hazards,data_paths,cur_list,events_list,wbreg_list),chunksize=1) 
+            collect_output = pool.starmap(sensitivity.regional_flood,zip(all_files,hzd_list,data_paths,pav_cost_list,pav_rat_list,
+                                                              cur_pav_list,cur_unpav_list,events_list,wbreg_list,hzd_list),chunksize=1) 
             pandas.concat(collect_output).to_csv(os.path.join(data_path,'summarized','sa_{}_rail.csv').format(hazard))
 
        

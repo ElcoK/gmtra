@@ -264,7 +264,7 @@ def road_cyclone(x,events,param_values,sensitivity=False):
             # the threshold value for breaking of trees is
             # hard-coded and based on literature. See Koks et al. (2019)
             if x['val_{}'.format(event)] > 150:
-                uncer_events.append(cleanup_cost_dict[x.infra_type]*x['length_{}'.format(event)]*x.fail_prob)
+                uncer_events.append(cleanup_cost_dict[x.road_type]*x['length_{}'.format(event)]*x.fail_prob)
             else:
                 uncer_events.append(0) 
         uncer_output.append(numpy.asarray(uncer_events))
@@ -357,7 +357,7 @@ def road_earthquake(x,global_costs,paved_ratios,frag_tables,events,wbreg_lookup,
     wbreg = wbreg_lookup[x.country]
 
     # get paved versus unpaved ratios for this region
-    ratios = paved_ratios.loc[(paved_ratios.ISO3 == x.country) & (paved_ratios.road_type == x.infra_type)]
+    ratios = paved_ratios.loc[(paved_ratios.ISO3 == x.country) & (paved_ratios.road_type == x.road_type)]
     
     # get road building cost for this region
     costs = global_costs[wbreg]
@@ -376,10 +376,10 @@ def road_earthquake(x,global_costs,paved_ratios,frag_tables,events,wbreg_lookup,
         # get the fragility value and cost based on the curve
         loss_ratios = numpy.array(loss_ratios)
         # different assumptions are made for different road types (i.e. 4 vs 2 lanes and width)
-        if x.infra_type == 'primary':
+        if x.road_type == 'primary':
             uncer_output.append(list((ratios.paved/100)*(param[0]*param[3]*costs['Paved 4L']+(1-param[0])*param[3]*costs['Paved 2L']))[0]*loss_ratios*lengths + 
             list((ratios.unpaved/100)*costs.Gravel)[0]*loss_ratios*lengths)
-        elif x.infra_type == 'secondary':
+        elif x.road_type == 'secondary':
             uncer_output.append(list((ratios.paved/100)*(param[1]*param[3]*costs['Paved 2L']+(1-param[1])*param[3]*150000))[0]*loss_ratios*lengths + 
             list((ratios.unpaved/100)*costs.Gravel)[0]*loss_ratios*lengths)   
         else:
@@ -486,7 +486,7 @@ def road_flood(x,global_costs,paved_ratios,flood_curve_paved,flood_curve_unpaved
     curve_unpaved = flood_curve_unpaved.loc[:,wbreg]
     
      # get paved versus unpaved ratios for this region
-    ratios = paved_ratios.loc[(paved_ratios.ISO3 == x.country) & (paved_ratios.road_type == x.infra_type)]
+    ratios = paved_ratios.loc[(paved_ratios.ISO3 == x.country) & (paved_ratios.road_type == x.road_type)]
     
     # get road building cost for this region
     costs = global_costs[wbreg]
@@ -502,11 +502,11 @@ def road_flood(x,global_costs,paved_ratios,flood_curve_paved,flood_curve_unpaved
         unpaved_frag = numpy.interp(list(x[[x for x in val_cols if 'val' in x]]),list(curve_unpaved.index), curve_unpaved.values)
 
         # different assumptions are made for different road types (i.e. 4 vs 2 lanes and width)
-        if x.infra_type == 'primary':
+        if x.road_type == 'primary':
             uncer_output.append(list((ratios.paved/100)*(param[0]*param[3]*costs['Paved 4L']
             +(1-param[0])*param[3]*costs['Paved 2L']))[0]*paved_frag*lengths 
              + list((ratios.unpaved/100)*costs.Gravel)[0]*unpaved_frag*lengths)
-        elif x.infra_type == 'secondary':
+        elif x.road_type == 'secondary':
             uncer_output.append(list((ratios.paved/100)*(param[1]*param[3]*costs['Paved 2L']
             +(1-param[1])*param[3]*150000))[0]*paved_frag*lengths 
             +list((ratios.unpaved/100)*costs.Gravel)[0]*unpaved_frag*lengths)   
@@ -799,13 +799,15 @@ def regional_cyclone(file,data_path,events,param_values,rail=False):
 
         # And save the outputs to a .csv file.
         if not rail:
-            df_cyc.groupby(['infra_type','country','continent','region'])[events].agg(sum_tuples).to_csv(os.path.join(data_path,'Cyc_impacts','{}.csv'.format(region)))
+            df_cyc.groupby(['road_type','country','continent','region'])[events].agg(sum_tuples).to_csv(os.path.join(data_path,'Cyc_impacts','{}.csv'.format(region)))
+            return df_cyc.groupby(['road_type','country','continent','region'])[events].agg(sum_tuples)
+
         else:
             df_cyc.groupby(['infra_type','country','continent','region'])[events].agg(sum_tuples).to_csv(os.path.join(data_path,'Cyc_impacts_rail','{}.csv'.format(region)))
+            return df_cyc.groupby(['infra_type','country','continent','region'])[events].agg(sum_tuples)
 
 
         # and return if desired.
-        return df_cyc.groupby(['infra_type','country','continent','region'])[events].agg(sum_tuples)
 
     except Exception as e:
         print('Failed to finish {} because of {}!'.format(file,e))
@@ -933,12 +935,13 @@ def regional_earthquake(file,data_path,global_costs,paved_ratios,events,wbreg_lo
         
         # And save the outputs to a .csv file.
         if not rail:
-            df.groupby(['infra_type','country','continent','region'])[events].agg(sum_tuples).to_csv(os.path.join(data_path,'EQ_impacts','{}.csv'.format(region)))
+            df.groupby(['road_type','country','continent','region'])[events].agg(sum_tuples).to_csv(os.path.join(data_path,'EQ_impacts','{}.csv'.format(region)))
+            return df.groupby(['road_type','country','continent','region'])[events].agg(sum_tuples)
         else:
             df.groupby(['infra_type','country','continent','region'])[events].agg(sum_tuples).to_csv(os.path.join(data_path,'EQ_impacts_rail','{}.csv'.format(region)))
+            return df.groupby(['infra_type','country','continent','region'])[events].agg(sum_tuples)
                     
         # and return if desired.
-        return df.groupby(['infra_type','country','continent','region'])[events].agg(sum_tuples)
 
     except Exception as e:
         print('Failed to finish {} because of {}!'.format(file,e))
@@ -976,67 +979,65 @@ def regional_flood(file,hzd,data_path,global_costs,paved_ratios,flood_curve_pave
     Returns:
         *DataFrame* : a pandas DataFrame with summary damage statistics for the loaded region.
     """ 
-    try:
+#    try:
         # open flood intersection file for the region
-        df = pandas.read_feather(file)
-        region = df.region.unique()[0]
-        val_cols = [x for x in list(df.columns) if 'val' in x]
-        
-        # remove all rows where the flood intersection value is zero (i.e. no inundation)
-        df = df.loc[~(df[val_cols] == 0).all(axis=1)]
-        
-        # if this means we have no rows left, stop right here.
-        if len(df) == 0:
-            print('No flooded roads in {}'.format(region))
-            return None
+    df = pandas.read_feather(file)
+    region = df.region.unique()[0]
+    val_cols = [x for x in list(df.columns) if 'val' in x]
     
-        # load parameter values. We read them from an external file, to make sure we use the same set for all regions.
-        try:
-            if not rail:
-                param_values = [numpy.fromfile(os.path.join(data_path,'input_data','param_values.pkl'))[x:x+4] 
-                    for x in range(0, len(numpy.fromfile(os.path.join(data_path,'input_data','param_values.pkl'))), 4)]
-                
-                # remove all bridge assets from the calculation. We calculate those damages separately.
-                all_bridge_files = [os.path.join(data_path,'bridges_osm_road',x) for x in os.listdir(os.path.join(data_path,'bridges_osm_road'))]
-                bridges = list(pandas.read_feather([x for x in all_bridge_files if os.path.split(file)[1][:-6] in x][0])['osm_id'])
-                df = df.loc[~(df['osm_id'].isin(bridges))]
-            else:
-                param_values = [numpy.fromfile(os.path.join(data_path,'input_data','param_values_fl_rail.pkl'))[x:x+3] 
-                    for x in range(0, len(numpy.fromfile(os.path.join(data_path,'input_data','param_values_fl_rail.pkl'))), 3)]
+    # remove all rows where the flood intersection value is zero (i.e. no inundation)
+    df = df.loc[~(df[val_cols] == 0).all(axis=1)]
+    
+    # if this means we have no rows left, stop right here.
+    if len(df) == 0:
+        print('No flooded roads in {}'.format(region))
+        return None
 
-                # remove all bridge assets from the calculation. We calculate those damages separately.
-                all_bridge_files = [os.path.join(data_path,'bridges_osm_rail',x) for x in os.listdir(os.path.join(data_path,'bridges_osm_rail'))]
-                bridges = list(pandas.read_feather([x for x in all_bridge_files if os.path.split(file)[1][:-6] in x][0])['osm_id'])
-                df = df.loc[~(df['osm_id'].isin(bridges))]                
-        except:
-            None
+    # load parameter values. We read them from an external file, to make sure we use the same set for all regions.
+    if not rail:
+        param_values = [numpy.fromfile(os.path.join(data_path,'input_data','param_values.pkl'))[x:x+4] 
+            for x in range(0, len(numpy.fromfile(os.path.join(data_path,'input_data','param_values.pkl'))), 4)]
         
-        df_output = pandas.DataFrame(columns=events,index=df.index).fillna(0)
-        df = pandas.concat([df,df_output],axis=1)
+        # remove all bridge assets from the calculation. We calculate those damages separately.
+        all_bridge_files = [os.path.join(data_path,'bridges_osm_road',x) for x in os.listdir(os.path.join(data_path,'bridges_osm_road'))]
+        bridges = list(pandas.read_feather([x for x in all_bridge_files if os.path.split(file)[1][:-6] in x][0])['osm_id'])
+        df = df.loc[~(df['osm_id'].isin(bridges))]
+
+    else:
+        param_values = [numpy.fromfile(os.path.join(data_path,'input_data','param_values_fl_rail.pkl'))[x:x+3] 
+            for x in range(0, len(numpy.fromfile(os.path.join(data_path,'input_data','param_values_fl_rail.pkl'))), 3)]
+
+        # remove all bridge assets from the calculation. We calculate those damages separately.
+        all_bridge_files = [os.path.join(data_path,'bridges_osm_rail',x) for x in os.listdir(os.path.join(data_path,'bridges_osm_rail'))]
+        bridges = list(pandas.read_feather([x for x in all_bridge_files if os.path.split(file)[1][:-6] in x][0])['osm_id'])
+        df = df.loc[~(df['osm_id'].isin(bridges))]                
+
     
-        # And we finally made it to the damage calculation!
-        tqdm.pandas(desc = region)
-        if not rail:
-            df = df.progress_apply(lambda x: road_flood(x,global_costs,paved_ratios,
-                                                         flood_curve_paved,flood_curve_unpaved,events,wbreg_lookup,param_values,val_cols),axis=1)
-        else:
-            # for railway we just load the curves seperately.
-            curve = pandas.read_excel(os.path.join(data_path,'input_data','Costs_curves.xlsx'),usecols=[1,2,3,4,5,6,7,8],
-                                 sheet_name='Flooding',index_col=[0],skipfooter=9,header = [0,1])
-            curve.columns = curve.columns.droplevel(0)
-            
-            df = df.progress_apply(lambda x: rail_flood(x,
-                                                    curve,events,param_values,val_cols,wbreg_lookup),axis=1)
-            
-        # And save the outputs to a .csv file.
-        if not rail:
-            df.groupby(['infra_type','country','continent','region'])[events].agg(sum_tuples).to_csv(os.path.join(data_path,'{}_impacts'.format(hzd),'{}.csv'.format(region)))
-        else:
-            df.groupby(['infra_type','country','continent','region'])[events].agg(sum_tuples).to_csv(os.path.join(data_path,'{}_impacts_rail'.format(hzd),'{}.csv'.format(region)))
-            
-        df.reset_index(inplace=True,drop=True)
+    df_output = pandas.DataFrame(columns=events,index=df.index).fillna(0)
+    df = pandas.concat([df,df_output],axis=1)
+
+    # And we finally made it to the damage calculation!
+    tqdm.pandas(desc = region)
+    if not rail:
+        df = df.progress_apply(lambda x: road_flood(x,global_costs,paved_ratios,
+                                                     flood_curve_paved,flood_curve_unpaved,events,wbreg_lookup,param_values,val_cols),axis=1)
+    else:
+        # for railway we just load the curves seperately.
+        curve = pandas.read_excel(os.path.join(data_path,'input_data','Costs_curves.xlsx'),usecols=[1,2,3,4,5,6,7,8],
+                             sheet_name='Flooding',index_col=[0],skiprows=1)
+        
+        df = df.progress_apply(lambda x: rail_flood(x,
+                                                curve,events,param_values,val_cols,wbreg_lookup),axis=1)
+    df.reset_index(inplace=True,drop=True)
+        
+    # And save the outputs to a .csv file.
+    if not rail:
+        df.groupby(['road_type','country','continent','region'])[events].agg(sum_tuples).to_csv(os.path.join(data_path,'{}_impacts','{}.csv'.format(region)))
+        return df.groupby(['road_type','country','continent','region'])[events].agg(sum_tuples)
+    else:
+        df.groupby(['infra_type','country','continent','region'])[events].agg(sum_tuples).to_csv(os.path.join(data_path,'{}_impacts_rail','{}.csv'.format(region)))
         return df.groupby(['infra_type','country','continent','region'])[events].agg(sum_tuples)
 
-    except Exception as e:
-        print('Failed to finish {} because of {}!'.format(file,e))
+#    except Exception as e:
+#        print('Failed to finish {} because of {}!'.format(file,e))
 

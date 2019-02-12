@@ -9,7 +9,7 @@ Copyright (C) 2019 Elco Koks. All versions released under the GNU Affero General
 import os
 import pandas
 import numpy
-import tqdm
+from tqdm import tqdm
 
 from gmtra.utils import sum_tuples,square_m2_cost_range,sensitivity_risk
 from gmtra.damage import road_flood,rail_flood,road_cyclone,rail_cyclone,road_earthquake,rail_earthquake,road_bridge_earthquake,road_bridge_flood_cyclone,rail_bridge_earthquake,rail_bridge_flood_cyclone
@@ -226,7 +226,7 @@ def regional_cyclone(file,data_path,events,param_values,rail=False):
         else:
             df_cyc = df_cyc.progress_apply(lambda x: rail_cyclone(x,events,param_values,sensitivity=True),axis=1)
 
-        df_cyc['risk'] = df_cyc.apply(lambda x: sensitivity_risk(x,'Cyc',[1/50,1/100,1/250,1/500,1/1000],events,len(param_values)),axis=1)
+        df_cyc['risk'] = df_cyc.apply(lambda x: sensitivity_risk(x,'Cyc',[1/50,1/100,1/250,1/500,1/1000],len(param_values)),axis=1)
         df_cyc = df_cyc.drop([x for x in list(df_cyc.columns) if (x in events) | ('val_' in x) | ('length_' in x)],axis=1)    
         df_cyc.reset_index(inplace=True,drop=True)
 
@@ -354,14 +354,16 @@ def regional_earthquake(file,data_path,global_costs,paved_ratios,events,wbreg_lo
         df = pandas.concat([df,df_output],axis=1)
     
         # And we finally made it to the damage calculation!
-        tqdm.pandas(desc = region)
+        tqdm.pandas(desc = 'damage_{}'.format(region))
         if not rail:
             df = df.progress_apply(lambda x: road_earthquake(x,global_costs,paved_ratios,frag_tables,events,wbreg_lookup,param_values,val_cols,sensitivity=True),axis=1)
         else:
             df = df.progress_apply(lambda x: rail_earthquake(x,frag_tables,events,param_values,val_cols,sensitivity=True),axis=1)
 
+        tqdm.pandas(desc = 'risk_{}'.format(region))
+
         # and calculate the risk
-        df['risk'] = df.apply(lambda x: sensitivity_risk(x,[1/250,1/475,1/975,1/1500,1/2475],events,len(param_values)),axis=1)
+        df['risk'] = df.apply(lambda x: sensitivity_risk(x,[1/250,1/475,1/975,1/1500,1/2475],len(param_values)),axis=1)
         
         # and remove values and lenghts from dataframe
         df = df.drop([x for x in list(df.columns) if (x in events) | ('val_' in x) | ('length_' in x)],axis=1)    
@@ -375,7 +377,7 @@ def regional_earthquake(file,data_path,global_costs,paved_ratios,events,wbreg_lo
     except Exception as e:
         print('Failed to finish {} because of {}!'.format(file,e))
 
-def regional_flood(file,data_path,global_costs,paved_ratios,flood_curve_paved,flood_curve_unpaved,events,wbreg_lookup,hazard,rail=False):
+def regional_flood(file,hazard,data_path,global_costs,paved_ratios,flood_curve_paved,flood_curve_unpaved,events,wbreg_lookup,rail=False):
     """
     Function to estimate the summary statistics of all flood damages in a region to road assets
     
@@ -431,7 +433,7 @@ def regional_flood(file,data_path,global_costs,paved_ratios,flood_curve_paved,fl
             else:
                 param_values = [numpy.fromfile(os.path.join(data_path,'input_data','param_values_fl_rail.pkl'))[x:x+3] 
                     for x in range(0, len(numpy.fromfile(os.path.join(data_path,'input_data','param_values_fl_rail.pkl'))), 3)]
-
+    
                 # remove all bridge assets from the calculation. We calculate those damages separately.
                 all_bridge_files = [os.path.join(data_path,'bridges_osm_rail',x) for x in os.listdir(os.path.join(data_path,'bridges_osm_rail'))]
                 bridges = list(pandas.read_feather([x for x in all_bridge_files if os.path.split(file)[1][:-6] in x][0])['osm_id'])
@@ -443,23 +445,25 @@ def regional_flood(file,data_path,global_costs,paved_ratios,flood_curve_paved,fl
         df = pandas.concat([df,df_output],axis=1)
     
         # And we finally made it to the damage calculation!
-        tqdm.pandas(desc = region)
+        tqdm.pandas(desc = 'damage_{}'.format(region))
         if not rail:
             df = df.progress_apply(lambda x: road_flood(x,global_costs,paved_ratios,
                                                          flood_curve_paved,flood_curve_unpaved,events,wbreg_lookup,param_values,val_cols,sensitivity=True),axis=1)
         else:
             curve = pandas.read_excel(os.path.join(data_path,'input_data','Costs_curves.xlsx'),usecols=[1,2,3,4,5,6,7,8],
-                                 sheet_name='Flooding',index_col=[0],skipfooter=9,header = [0,1])
+                                     sheet_name='Flooding',index_col=[0],skiprows=1)
             curve.columns = curve.columns.droplevel(0)
             
             df = df.progress_apply(lambda x: rail_flood(x,
                                                     curve,events,param_values,val_cols,wbreg_lookup,sensitivity=True),axis=1)         
     
+        tqdm.pandas(desc = 'risk_{}'.format(region))
+
         # and calculate the risk based on all results 
         if (hazard == 'PU') | (hazard == 'FU'):
-            df['risk'] = df.apply(lambda x: sensitivity_risk(x,hazard,[1/5,1/10,1/20,1/50,1/75,1/100,1/200,1/250,1/500,1/1000],events,len(param_values)),axis=1)
+            df['risk'] = df.progress_apply(lambda x: sensitivity_risk([1/5,1/10,1/20,1/50,1/75,1/100,1/200,1/250,1/500,1/1000],x,events,len(param_values)),axis=1)
         else:
-            df['risk'] = df.apply(lambda x: sensitivity_risk(x,hazard,[1/10,1/20,1/50,1/100,1/200,1/500,1/1000],events,len(param_values)),axis=1)
+            df['risk'] = df.progress_apply(lambda x: sensitivity_risk([1/10,1/20,1/50,1/100,1/200,1/500,1/1000],x,len(param_values)),axis=1)
         
         # and remove values and lenghts from dataframe
         df = df.drop([x for x in list(df.columns) if (x in events) | ('val_' in x) | ('length_' in x)],axis=1)    
@@ -470,7 +474,7 @@ def regional_flood(file,data_path,global_costs,paved_ratios,flood_curve_paved,fl
             df.to_csv(os.path.join(data_path,'{}_sensitivity'.format(hazard),'{}.csv'.format(region)))
         else:
             df.to_csv(os.path.join(data_path,'{}_sensitivity_rail'.format(hazard),'{}.csv'.format(region)))
-            
+        
         
     except Exception as e:
         print('Failed to finish {} because of {}!'.format(file,e))

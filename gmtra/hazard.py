@@ -360,13 +360,13 @@ def region_intersection(n,hzd,rail=False):
         print('Failed to finish {} because of {}!'.format(region,e))
 
 
-def get_liquefaction_region(x,rail=False):
+def get_liquefaction_region(n,rail=False):
     """
     Function to intersect all return periods of a particualar hazard with all 
     road or railway assets in the specific region. 
     
     Arguments:
-        *x* : row of a region in the specified shapefile with all the regions.
+        *n* : the index ID of a region in the specified shapefile with all the regions.
         
     Optional Arguments:
         *rail* : Default is **False**. Set to **True** if you would like to 
@@ -377,14 +377,21 @@ def get_liquefaction_region(x,rail=False):
         infrastructure assets and the liquefaction map. Will be saved as .feather file.
     """
     
-    # get name of the region and the geometry
-    region = x[3]
-    reg_geom = x[-1]
-    
-    # specify the file path where all data is located.
-    data_path = load_config()['paths']['data']
-    
     try:
+            
+        # specify the file path where all data is located.
+        data_path = load_config()['paths']['data']
+           
+        # load shapefile with unique information for each region
+        global_regions = geopandas.read_file(os.path.join(data_path,'input_data','global_regions_v2.shp'))
+        
+        # grab the row of the region from the global region shapefile
+        x = global_regions.iloc[n]
+        
+        # get name of the region and the geometry
+        region = x.GID_2
+        reg_geom = x.geometry
+        
         # if intersection is already done for this region, stop and move on to the next region.
         if (not rail) & os.path.exists(os.path.join(data_path,'liquefaction_road','{}_liq.ft'.format(region))):
             print('{} already finished!'.format(region))
@@ -440,7 +447,7 @@ def get_liquefaction_region(x,rail=False):
         infra_gpd[['length_liq','liquefaction']] = inb[['length_liq','liquefaction']] 
         output = infra_gpd.drop(['geometry'],axis=1)
         output['country'] = region[:3] 
-        output['continent'] = x[10]
+        output['continent'] = x.continent
         output['region'] = region
         
         # and save the output to the designated folders.
@@ -452,13 +459,13 @@ def get_liquefaction_region(x,rail=False):
     except Exception as e:
         print('Failed to finish {} because of {}!'.format(region,e))
         	
-def get_tree_density(x,rail=False):
+def get_tree_density(n,rail=False):
     """
     Function to intersect all return periods of a particualar hazard with all 
     road or railway assets in the specific region. 
     
     Arguments:
-        *x* : row of a region in the specified shapefile with all the regions.
+        *n* : the index ID of a region in the specified shapefile with all the regions.
         
     Optional Arguments:
         *rail* : Default is **False**. Set to **True** if you would like to 
@@ -469,13 +476,20 @@ def get_tree_density(x,rail=False):
         infrastructure assets and the liquefaction map. Will be saved as .feather file.
     """
     try:
-        # get name of the region and the geometry
-        region = x[3]
-        reg_geom = x[-1]
-
+ 
         # specify the file path where all data is located.
         data_path = load_config()['paths']['data']
-    
+           
+        # load shapefile with unique information for each region
+        global_regions = geopandas.read_file(os.path.join(data_path,'input_data','global_regions_v2.shp'))
+        
+        # grab the row of the region from the global region shapefile
+        x = global_regions.iloc[n]
+        
+        # get name of the region and the geometry
+        region = x.GID_2
+        reg_geom = x.geometry
+
         # load OpenStreetMap data.
         if not rail:
             road_gpd = roads(data_path,region,regional=True)
@@ -509,10 +523,10 @@ def get_tree_density(x,rail=False):
         else:
             pandas.DataFrame(infra_gpd).to_feather(os.path.join(data_path,'tree_cover_rail','{}.ft'.format(region)))
 
-        print('{} finished!'.format(x[3]))
+        print('{} finished!'.format(region))
 
     except:
-        print('{} failed!'.format(x[3]))
+        print('{} failed!'.format(region))
 
 def bridge_intersection(file,rail=False):
     """

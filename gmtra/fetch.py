@@ -29,27 +29,31 @@ def roads(data_path,area_name,regional=False):
         data = load_osm_data_region(data_path,area_name)
     else:
         data = load_osm_data(data_path,area_name)
-       
-    # perform SQL query on the OpenStreetMap data
-    sql_lyr = data.ExecuteSQL("SELECT osm_id,highway FROM lines WHERE highway IS NOT NULL")
     
-    # extract all roads from the .osm.pbf file
-    roads=[]
-    for feature in sql_lyr:
-        if feature.GetField('highway') is not None:
-            osm_id = feature.GetField('osm_id')
-            shapely_geo = shapely.wkt.loads(feature.geometry().ExportToWkt()) 
-            if shapely_geo is None:
-                continue
-            highway=feature.GetField('highway')
-            roads.append([osm_id,highway,shapely_geo])
-    
-    # if no roads are extracted (perhaps a natural area without roads or a badly mapped area, 
-    # we just return an empty geopandas GeoDataFrame)
+    roads=[]    
+    if data is not None:
+
+        # perform SQL query on the OpenStreetMap data
+        sql_lyr = data.ExecuteSQL("SELECT osm_id,highway FROM lines WHERE highway IS NOT NULL")
+        for feature in sql_lyr:
+            try:
+                if feature.GetField('highway') is not None:
+                    osm_id = feature.GetField('osm_id')
+                    shapely_geo = shapely.wkt.loads(feature.geometry().ExportToWkt()) 
+                    if shapely_geo is None:
+                        continue
+                    highway=feature.GetField('highway')
+                    roads.append([osm_id,highway,shapely_geo])
+            except:
+                    print("WARNING: skipped a road")
+    else:
+        print("ERROR: Nonetype error when requesting SQL. Check required.")    
+
     if len(roads) > 0:
         return geopandas.GeoDataFrame(roads,columns=['osm_id','infra_type','geometry'],crs={'init': 'epsg:4326'})
     else:
-        print('No roads in {}'.format(area_name))
+        print("WARNING: No roads or No Memory. returning empty GeoDataFrame") 
+        return geopandas.GeoDataFrame(columns=['osm_id','infra_type','geometry'],crs={'init': 'epsg:4326'})
 
 def railway(data_path,country,regional=True):
     """
@@ -69,27 +73,31 @@ def railway(data_path,country,regional=True):
     else:
         data = load_osm_data(data_path,country)
            
-    # perform SQL query on the OpenStreetMap data
-    sql_lyr = data.ExecuteSQL("SELECT osm_id,service,railway FROM lines WHERE railway IS NOT NULL")
-    
-    # extract all roads from the .osm.pbf file
-    railways=[]
-    for feature in sql_lyr:
-        if feature.GetField('railway') is not None:
-            osm_id = feature.GetField('osm_id')
-            service = feature.GetField('service')
-            shapely_geo = shapely.wkt.loads(feature.geometry().ExportToWkt()) 
-            if shapely_geo is None:
-                continue
-            railway=feature.GetField('railway')
-            railways.append([osm_id,railway,service,shapely_geo])
-    
-    # if no railways are extracted (perhaps a natural area without roads or a badly mapped area, 
-    # we just return an empty geopandas GeoDataFrame)
-    if len(railways) > 0:
-        return geopandas.GeoDataFrame(railways,columns=['osm_id','infra_type','service','geometry'],crs={'init': 'epsg:4326'})
+    railways=[]    
+    if data is not None:
+
+        # perform SQL query on the OpenStreetMap data
+        sql_lyr = data.ExecuteSQL("SELECT osm_id,service,railway FROM lines WHERE railway IS NOT NULL")
+        
+        for feature in sql_lyr:
+            try:
+                if feature.GetField('railway') is not None:
+                    osm_id = feature.GetField('osm_id')
+                    shapely_geo = shapely.wkt.loads(feature.geometry().ExportToWkt()) 
+                    if shapely_geo is None:
+                        continue
+                    railway=feature.GetField('railway')
+                    railways.append([osm_id,railway,shapely_geo])
+            except:
+                    print("warning: skipped a railway")
     else:
-        print('No railway in {}'.format(country))
+        print("ERROR: Nonetype error when requesting SQL. Check required.")    
+
+    if len(railways) > 0:
+        return geopandas.GeoDataFrame(railways,columns=['osm_id','infra_type','geometry'],crs={'init': 'epsg:4326'})
+    else:
+        print("WARNING: No railway or No Memory. returning empty GeoDataFrame") 
+        return geopandas.GeoDataFrame(columns=['osm_id','infra_type','geometry'],crs={'init': 'epsg:4326'})
         
 def bridges(data_path,area_name,regional=True):
     """
@@ -110,26 +118,31 @@ def bridges(data_path,area_name,regional=True):
     else:
         data = load_osm_data(data_path,area_name)
            
-    # perform SQL query on the OpenStreetMap data
-    sql_lyr = data.ExecuteSQL("SELECT osm_id,bridge,highway,railway,lanes FROM lines WHERE bridge IS NOT NULL")
-    
-    # extract all bridges from the .osm.pbf file
+     # extract all bridges from the .osm.pbf file
     bridges=[]
-    for feature in sql_lyr:
-        if feature.GetField('bridge') is not None:
-            osm_id = feature.GetField('osm_id')
-            bridge = feature.GetField('bridge')
-            lanes = feature.GetField('lanes')
-            highway = feature.GetField('highway')
-            railway = feature.GetField('railway')
-            shapely_geo = shapely.wkt.loads(feature.geometry().ExportToWkt()) 
-            if shapely_geo is None:
-                continue
-            bridges.append([osm_id,bridge,lanes,highway,railway,shapely_geo])
+    if data is not None:
+       
+        # perform SQL query on the OpenStreetMap data
+        sql_lyr = data.ExecuteSQL("SELECT osm_id,bridge,highway,railway FROM lines WHERE bridge IS NOT NULL")
     
-    # if no roads are extracted (perhaps a natural area without roads or a badly mapped area, 
-    # we just return an empty geopandas GeoDataFrame)   
-    if len(bridges) > 0:
-        return geopandas.GeoDataFrame(bridges,columns=['osm_id','bridge','lanes','road_type','rail_type','geometry'],crs={'init': 'epsg:4326'})
+        for feature in sql_lyr:
+            try:
+                if feature.GetField('bridge') is not None:
+                    osm_id = feature.GetField('osm_id')
+                    bridge = feature.GetField('bridge')
+                    highway = feature.GetField('highway')
+                    railway = feature.GetField('railway')
+                    shapely_geo = shapely.wkt.loads(feature.geometry().ExportToWkt()) 
+                    if shapely_geo is None:
+                        continue
+                    bridges.append([osm_id,bridge,highway,railway,shapely_geo])
+            except:
+                    print("WARNING: skipped a bridge")
     else:
-        print('No bridges in {}'.format(area_name))
+        print("ERROR: Nonetype error when requesting SQL. Check required.")        
+
+    if len(bridges) > 0:
+        return geopandas.GeoDataFrame(bridges,columns=['osm_id','bridge','road_type','rail_type','geometry'],crs={'init': 'epsg:4326'})
+    else:
+        print("WARNING: No railway or No Memory. returning empty GeoDataFrame") 
+        return geopandas.GeoDataFrame(columns=['osm_id','bridge','road_type','rail_type','geometry'],crs={'init': 'epsg:4326'})
