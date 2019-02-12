@@ -10,15 +10,19 @@ Firstly, we need to add a few attributes to the osmconf.ini file to be able to e
 1. Find the location of the osmconf.ini of the conda enviroment you are working in. It is generally located here:
 
 **Windows**:
+
 .. code-block:: bash
 	%USERPROFILE%\AppData\Local\Continuum\miniconda3\envs\py36\Library\share\gdal
 
 **Linux**:
+
 .. code-block:: bash
 	/home/<user>/.conda/envs/py36/share/gdal
 
 	
-2. On line 48 (attributes of [lines]), add **railway,bridge,service**, when they are not there yet. Note: make sure they are not in the list twice! This will cause problems.
+2. On line 48 (the attributes of **[lines]**), add **railway, bridge, service**, when they are not there yet. 
+
+**Note**: make sure they are not in the list twice! This will cause problems.
 	
 Secondly, we need to download osmconvert. This is a small tool that can be used to clip OSM data.
 
