@@ -15,11 +15,13 @@ We need to add a few attributes to the osmconf.ini file to be able to extract ev
 **Windows**:
 
 .. code-block:: bash
+
 	%USERPROFILE%\AppData\Local\Continuum\miniconda3\envs\py36\Library\share\gdal
 
 **Linux**:
 
 .. code-block:: bash
+
 	/home/<user>/.conda/envs/py36/share/gdal
 
 	
