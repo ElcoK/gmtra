@@ -8,9 +8,9 @@ Copyright (C) 2019 Elco Koks. All versions released under the GNU Affero General
 
 import os
 import json
-import rasterio as rio
-import numpy as np
-import geopandas as gpd
+import rasterio
+import numpy
+import geopandas
 from osgeo import ogr
 import country_converter as coco
 from collections import defaultdict
@@ -83,12 +83,12 @@ def load_hazard_map(hzd_path):
         
     """    
     # open hazard map using rasterio
-    with rio.open(hzd_path) as src:
+    with rasterio.open(hzd_path) as src:
         affine = src.affine
         # Read as numpy array
         array = src.read(1)
  
-        array = np.array(array,dtype='int16')
+        array = numpy.array(array,dtype='int16')
     
     return array,affine
 
@@ -120,7 +120,7 @@ def load_ssbn_hazard(hazard_path,country_full,country_ISO2,flood_type,flood_type
     flood_path = os.path.join(hazard_path,'InlandFlooding',country_full,'{}_{}_merged'.format(country_ISO2,flood_type),'{}-{}-{}.tif'.format(country_ISO2,flood_type_abb,rp))    
 
     # open hazard map using rasterio
-    with rio.open(flood_path) as src:
+    with rasterio.open(flood_path) as src:
         affine = src.affine
         array = src.read(1)
         
@@ -174,22 +174,47 @@ def sensitivity_risk(RPS,loss_list,events,param_length):
         collect_risks.append(integrate.simps([loss_list[y] for loss_list in loss_list[events]][::-1], x=RPS[::-1]))
     return collect_risks
 
-def monetary_risk(RPS,loss_list):
+def monetary_risk(RPS,x,events):
     """
     Function to estimate the monetary risk for a particular hazard.
     
     Arguments:
         *RPS* : list of return periods in floating probabilities (i.e. [1/10,1/20,1/50]).
         
-        *loss_list* : list of lists with a monetary value per return period within each inner list.
+        *x* : list of lists with a monetary value per return period within each inner list.
+        
+        *events* : list of events that correspond with the return periods in the inner lists of **x**.
         
     Returns:
         *collect_risks* : a list of all risks for each inner list of the input list.
     """
     collect_risks = []
     for y in range(7):
-        collect_risks.append(integrate.simps([x[y] for x in loss_list][::-1], x=RPS[::-1]))
+        collect_risks.append(integrate.simps([x[y] for x in x[events]][::-1], x=RPS[::-1]))
     return collect_risks
+
+
+def set_prot_standard(x,prot_lookup,events):
+    """
+    Function to set all values to zero below protection standard.
+    
+    Arguments:
+        *x* : row in a GeoDataFrame that represents an unique infrastructure asset.
+        
+        *prot_lookup* : dictionary with protection standards for each region.
+ 
+        *events* : A list with the unique hazard events in row **x**.
+            
+    Returns:
+        *x* : row in a GeoDataFrame that represents an unique infrastructure asset with zero values for no flooding.
+
+    """
+    prot_stand = prot_lookup[x.region]
+    no_floods= [z for z in events if prot_stand > int(z.split('-')[1])]
+    for no_flood in no_floods:
+        x[no_flood] = (0,0,0,0,0,0,0)
+    return x
+
 
 def exposed_length_risk(x,hzd,RPS):
     """
@@ -355,7 +380,7 @@ def create_folder_lookup():
     fullback = defaultdict(default_factory,{'Guernsey':'GGY','Jersey':'JEY','Saint Martin':'MAF','Sudan':'SUD','South Sudan':'SDS'})
     
     # load data files and change some of the names to make them matching
-    global_data = gpd.read_file(os.path.join(data_path,'input_data','global_countries.shp'))
+    global_data = geopandas.read_file(os.path.join(data_path,'input_data','global_countries.shp'))
     glob_data_full = [coco.convert(names=[x], to='name_short').lower().replace(' ','_').replace("'","") if x not in notmatchingfull 
                       else notmatchingfull[x] for x in list(global_data.ISO_3digit)]
     glob_data_full = ['micronesia' if x.startswith('micronesia') else str(x) for x in glob_data_full]
@@ -476,3 +501,147 @@ def map_roads():
     })
         
     return dict_map
+
+def pluvial_design(x,hazard):
+    if x.GroupCode == 'HIC':
+        if x.road_type in ['primary','secondary']:
+            if hazard == 'PU':
+                x[['PU-5','PU-10','PU-20','PU-50']] = [(0,0,0,0,0,0,0)]*4
+            elif hazard == 'FU':
+                x[['FU-5','FU-10','FU-20','FU-50']] = [(0,0,0,0,0,0,0)]*4
+            elif hazard == 'CF':
+                x[['CF-10','CF-20','CF-50']] = [(0,0,0,0,0,0,0)]*3               
+        else:
+            if hazard == 'PU':
+                x[['PU-5','PU-10','PU-20']] = [(0,0,0,0,0,0,0)]*3
+            elif hazard == 'FU':
+                x[['FU-5','FU-10','FU-20']] = [(0,0,0,0,0,0,0)]*3
+            elif hazard == 'CF':
+                x[['CF-10','CF-20']] = [(0,0,0,0,0,0,0)]*2
+    elif x.GroupCode == 'UMC':
+        if x.road_type in ['primary','secondary']:
+            if hazard == 'PU':
+                x[['PU-5','PU-10','PU-20']] = [(0,0,0,0,0,0,0)]*3
+            elif hazard == 'FU':
+                x[['FU-5','FU-10','FU-20']] = [(0,0,0,0,0,0,0)]*3
+            elif hazard == 'CF':
+                x[['CF-10','CF-20']] = [(0,0,0,0,0,0,0)]*2
+        else:
+            if hazard == 'PU':
+                x[['PU-5','PU-10']] = [(0,0,0,0,0,0,0)]*2
+            elif hazard == 'FU':
+                x[['FU-5','FU-10']] = [(0,0,0,0,0,0,0)]*2
+            elif hazard == 'CF':
+                x[['CF-10']] = [(0,0,0,0,0,0,0)]*1
+    else:
+        if x.road_type in ['primary','secondary']:
+            if hazard == 'PU':
+                x[['PU-5','PU-10']] = [(0,0,0,0,0,0,0)]*2
+            elif hazard == 'FU':
+                x[['FU-5','FU-10']] = [(0,0,0,0,0,0,0)]*2
+            elif hazard == 'CF':
+                x[['CF-10']] = [(0,0,0,0,0,0,0)]*1
+       
+    return x
+
+def pluvial_design_1up(x,hazard):
+    if x.GroupCode == 'HIC':
+        if x.road_type in ['primary','secondary']:
+            if hazard == 'PU':
+                x[['PU-5','PU-10','PU-20','PU-50','PU-75','PU-100']] = [(0,0,0,0,0,0,0)]*6
+            elif hazard == 'FU':
+                x[['FU-5','FU-10','FU-20','FU-50','FU-75','FU-100']] = [(0,0,0,0,0,0,0)]*6
+            elif hazard == 'CF':
+                x[['CF-10','CF-20','CF-50','CF-100']] = [(0,0,0,0,0,0,0)]*4               
+        else:
+            if hazard == 'PU':
+                x[['PU-5','PU-10','PU-20','PU-50']] = [(0,0,0,0,0,0,0)]*4
+            elif hazard == 'FU':
+                x[['FU-5','FU-10','FU-20','FU-50']] = [(0,0,0,0,0,0,0)]*4
+            elif hazard == 'CF':
+                x[['CF-10','CF-20','CF-50']] = [(0,0,0,0,0,0,0)]*3
+    elif x.GroupCode == 'UMC':
+        if x.road_type in ['primary','secondary']:
+            if hazard == 'PU':
+                x[['PU-5','PU-10','PU-20','PU-50']] = [(0,0,0,0,0,0,0)]*4
+            elif hazard == 'FU':
+                x[['FU-5','FU-10','FU-20','FU-50']] = [(0,0,0,0,0,0,0)]*4
+            elif hazard == 'CF':
+                x[['CF-10','CF-20','CF-50']] = [(0,0,0,0,0,0,0)]*3
+        else:
+            if hazard == 'PU':
+                x[['PU-5','PU-10','PU-20']] = [(0,0,0,0,0,0,0)]*3
+            elif hazard == 'FU':
+                x[['FU-5','FU-10','FU-20']] = [(0,0,0,0,0,0,0)]*3
+            elif hazard == 'CF':
+                x[['CF-10','CF-20']] = [(0,0,0,0,0,0,0)]*2
+    else:
+        if x.road_type in ['primary','secondary']:
+            if hazard == 'PU':
+                x[['PU-5','PU-10','PU-20']] = [(0,0,0,0,0,0,0)]*3
+            elif hazard == 'FU':
+                x[['FU-5','FU-10','FU-20']] = [(0,0,0,0,0,0,0)]*3
+            elif hazard == 'CF':
+                x[['CF-10','CF-20']] = [(0,0,0,0,0,0,0)]*2
+        else:
+            if hazard == 'PU':
+                x[['PU-5','PU-10']] = [(0,0,0,0,0,0,0)]*2
+            elif hazard == 'FU':
+                x[['FU-5','FU-10']] = [(0,0,0,0,0,0,0)]*2
+            elif hazard == 'CF':
+                x[['CF-10']] = [(0,0,0,0,0,0,0)]*1
+        
+    return x
+
+
+def pluvial_design_rail(x,hazard):
+    if (hazard == 'PU'):
+        if  x.GroupCode == 'HIC':
+            x[['PU-5','PU-10','PU-20','PU-50']] = [(0,0,0,0,0,0,0)]*4
+        elif x.GroupCode == 'UMC':
+            x[['PU-5','PU-10','PU-20','PU-50']] = [(0,0,0,0,0,0,0)]*4
+        else:
+            x[['PU-5','PU-10','PU-20']] =[(0,0,0,0,0,0,0)]*3
+
+    if (hazard == 'FU'):
+        if  x.GroupCode == 'HIC':
+            x[['FU-5','FU-10','FU-20','FU-50']] = [(0,0,0,0,0,0,0)]*4
+        elif x.GroupCode == 'UMC':
+            x[['FU-5','FU-10','FU-20','FU-50']] = [(0,0,0,0,0,0,0)]*4
+        else:
+            x[['FU-5','FU-10','FU-20']] = [(0,0,0,0,0,0,0)]*3
+
+
+    if (hazard == 'CF'):
+        if  x.GroupCode == 'HIC':
+            x[['CF-10','CF-20','CF-50',]] =[(0,0,0,0,0,0,0)]*3
+        elif x.GroupCode == 'UMC':
+            x[['CF-10','CF-20','CF-50']] = [(0,0,0,0,0,0,0)]*3
+        else:
+            x[['CF-10','CF-20']] = [(0,0,0,0,0,0,0)]*2
+
+    return x
+
+def get_value(x,ne_sindex,ne_countries,col):
+    matches = ne_countries.loc[ne_sindex.intersection(x.centroid.bounds[:2])]
+    
+    for match in matches.iterrows():
+        if match[1].geometry.intersects(x) == True:
+            return match[1][col]
+
+def gdp_lookup(x,GDP_lookup):
+    try:
+        return GDP_lookup[x]
+    except:
+        return 0
+       
+def get_mean(x,columns):
+    for col in columns:
+        x[col] = numpy.mean(x[col])
+    return x
+
+def wbregion(x,wbc_lookup):
+    try:
+        return wbc_lookup[x]
+    except:
+        return 'YHI'

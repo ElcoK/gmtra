@@ -19,6 +19,8 @@
 
 .. autofunction:: gmtra.utils.sum_tuples
 
+.. autofunction:: gmtra.utils.set_prot_standard
+
 .. autofunction:: gmtra.utils.sensitivity_risk
 
 .. autofunction:: gmtra.utils.monetary_risk

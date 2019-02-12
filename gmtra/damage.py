@@ -80,9 +80,9 @@ def road_bridge_flood_cyclone(x,design_table,depth_threshs,param_values,events,a
         return monetary_risk(all_rps,list(zip(numpy.percentile(numpy.asarray(uncer_output), 0,axis=0),numpy.percentile(numpy.asarray(uncer_output), 20,axis=0),
                                                 numpy.percentile(numpy.asarray(uncer_output), 40,axis=0),numpy.percentile(numpy.asarray(uncer_output), 50,axis=0),
                                                 numpy.percentile(numpy.asarray(uncer_output), 60,axis=0),numpy.percentile(numpy.asarray(uncer_output), 80,axis=0),
-                                                numpy.percentile(numpy.asarray(uncer_output), 100,axis=0))))
+                                                numpy.percentile(numpy.asarray(uncer_output), 100,axis=0))),events)
     else:
-        return sensitivity_risk(all_rps,[tuple(x) for x in numpy.array(uncer_output).T])
+        return sensitivity_risk(all_rps,[tuple(x) for x in numpy.array(uncer_output).T],events,len([tuple(x) for x in numpy.array(uncer_output).T]))
 
 
 def rail_bridge_flood_cyclone(x,design_table,depth_threshs,param_values,events,all_rps,sensitivity=False):
@@ -134,12 +134,12 @@ def rail_bridge_flood_cyclone(x,design_table,depth_threshs,param_values,events,a
         return monetary_risk(all_rps,list(zip(numpy.percentile(numpy.asarray(uncer_output), 0,axis=0),numpy.percentile(numpy.asarray(uncer_output), 20,axis=0),
                                                 numpy.percentile(numpy.asarray(uncer_output), 40,axis=0),numpy.percentile(numpy.asarray(uncer_output), 50,axis=0),
                                                 numpy.percentile(numpy.asarray(uncer_output), 60,axis=0),numpy.percentile(numpy.asarray(uncer_output), 80,axis=0),
-                                                numpy.percentile(numpy.asarray(uncer_output), 100,axis=0))))
+                                                numpy.percentile(numpy.asarray(uncer_output), 100,axis=0))),events)
     else:
-        return sensitivity_risk(all_rps,[tuple(x) for x in numpy.array(uncer_output).T])
+        return sensitivity_risk(all_rps,[tuple(x) for x in numpy.array(uncer_output).T],events,len([tuple(x) for x in numpy.array(uncer_output).T]))
 
 
-def road_bridge_earthquake(x,eq_curve,param_values,vals_EQ,all_rps,sensitivity=False):
+def road_bridge_earthquake(x,eq_curve,param_values,events,all_rps,sensitivity=False):
     """
     Function to estimate the range of earthquake damages to an individual bridge asset.
 
@@ -150,7 +150,7 @@ def road_bridge_earthquake(x,eq_curve,param_values,vals_EQ,all_rps,sensitivity=F
         
         *param_values* : A NumPy Array with sets of parameter values we would like to test.
         
-        *vals_EQ* : A list with the unique hazard events in row **x**.
+        *events* : A list with the unique hazard events in row **x**.
         
         *all_rps* : A list with all return periods for the hazard that is being considered.
     
@@ -170,7 +170,7 @@ def road_bridge_earthquake(x,eq_curve,param_values,vals_EQ,all_rps,sensitivity=F
         curve = eq_curve.iloc[:,int(param[4])-1]
 
         # get the fragility value and cost based on the curve
-        frag = numpy.interp(list(x[[x for x in vals_EQ ]]),list(curve.index), curve.values)
+        frag = numpy.interp(list(x[[x for x in events ]]),list(curve.index), curve.values)
         cost = x.cost[0]+((x.cost[1]-x.cost[0])*param[3])
         
         # different assumptions are made for different road types (i.e. 4 vs 2 lanes and width)
@@ -184,9 +184,9 @@ def road_bridge_earthquake(x,eq_curve,param_values,vals_EQ,all_rps,sensitivity=F
         return monetary_risk(all_rps,list(zip(numpy.percentile(numpy.asarray(uncer_output), 0,axis=0),numpy.percentile(numpy.asarray(uncer_output), 20,axis=0),
                                                 numpy.percentile(numpy.asarray(uncer_output), 40,axis=0),numpy.percentile(numpy.asarray(uncer_output), 50,axis=0),
                                                 numpy.percentile(numpy.asarray(uncer_output), 60,axis=0),numpy.percentile(numpy.asarray(uncer_output), 80,axis=0),
-                                                numpy.percentile(numpy.asarray(uncer_output), 100,axis=0))))
+                                                numpy.percentile(numpy.asarray(uncer_output), 100,axis=0))),events)
     else:
-        return sensitivity_risk(all_rps,[tuple(x) for x in numpy.array(uncer_output).T])
+        return sensitivity_risk(all_rps,[tuple(x) for x in numpy.array(uncer_output).T],events,len([tuple(x) for x in numpy.array(uncer_output).T]))
 
 
 def rail_bridge_earthquake(x,eq_curve,param_values,vals_EQ,events,all_rps,sensitivity=False):
@@ -230,9 +230,9 @@ def rail_bridge_earthquake(x,eq_curve,param_values,vals_EQ,events,all_rps,sensit
         return monetary_risk(all_rps,list(zip(numpy.percentile(numpy.asarray(uncer_output), 0,axis=0),numpy.percentile(numpy.asarray(uncer_output), 20,axis=0),
                                                 numpy.percentile(numpy.asarray(uncer_output), 40,axis=0),numpy.percentile(numpy.asarray(uncer_output), 50,axis=0),
                                                 numpy.percentile(numpy.asarray(uncer_output), 60,axis=0),numpy.percentile(numpy.asarray(uncer_output), 80,axis=0),
-                                                numpy.percentile(numpy.asarray(uncer_output), 100,axis=0))))
+                                                numpy.percentile(numpy.asarray(uncer_output), 100,axis=0))),events)
     else:
-        return sensitivity_risk(all_rps,[tuple(x) for x in numpy.array(uncer_output).T])
+        return sensitivity_risk(all_rps,[tuple(x) for x in numpy.array(uncer_output).T],events,len([tuple(x) for x in numpy.array(uncer_output).T]))
 
 def road_cyclone(x,events,param_values,sensitivity=False):
     """
