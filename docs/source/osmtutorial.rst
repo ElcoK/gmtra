@@ -5,7 +5,10 @@
 
 To be able to extract the data from OpenStreetMap (OSM), a few steps and downloads are required.
 
-Firstly, we need to add a few attributes to the osmconf.ini file to be able to extract railways and bridges.
+
+Add attributes to osmconf.ini
+-----------------------------
+We need to add a few attributes to the osmconf.ini file to be able to extract everything we want.
 
 1. Find the location of the osmconf.ini of the conda enviroment you are working in. It is generally located here:
 
@@ -24,7 +27,10 @@ Firstly, we need to add a few attributes to the osmconf.ini file to be able to e
 
 **Note**: make sure they are not in the list twice! This will cause problems.
 	
-Secondly, we need to download osmconvert. This is a small tool that can be used to clip OSM data.
+	
+Download osmconvert
+-------------------
+Osmconvert is a small tool that can be used to clip OSM data.
 
 1. Download **osmconvert64** from http://wiki.openstreetmap.org/wiki/Osmconvert. 
 2. Create a new directory in your working directory (where all the data is stored as well), called **osmconvert**
