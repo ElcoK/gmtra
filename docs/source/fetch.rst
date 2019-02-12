@@ -1,6 +1,6 @@
 
 =======================
-4. Fetch asset data
+5. Fetch asset data
 =======================
 
 Fetch roads

@@ -1,6 +1,6 @@
 
 =======================
-5. Hazard extraction
+6. Hazard extraction
 =======================
 
 Polygonize a single hazard file

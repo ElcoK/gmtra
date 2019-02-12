@@ -1,6 +1,6 @@
 
 ==========================
-3. Preprocessing functions
+4. Preprocessing functions
 ==========================
 
 Download planet OSM

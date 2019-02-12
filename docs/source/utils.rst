@@ -1,6 +1,6 @@
 
 =======================
-2. Utils
+3. Utils
 =======================
 
 .. autofunction:: gmtra.utils.load_config

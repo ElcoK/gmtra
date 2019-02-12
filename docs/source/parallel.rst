@@ -1,6 +1,6 @@
 
 =======================
-9. Parallel functions
+10. Parallel functions
 =======================
 .. autofunction:: gmtra.parallel.bridge_extraction
 

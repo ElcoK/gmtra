@@ -1,6 +1,6 @@
 
 =======================
-6. Exposure analysis
+7. Exposure analysis
 =======================
 
 Estimate exposure of all roads in a region
