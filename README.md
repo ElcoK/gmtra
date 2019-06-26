@@ -6,7 +6,7 @@
 
 This repository provides the code to perform a global transport asset risk analysis for earthquakes, floods and cyclones. 
 
-It also provides Jupyter Notebooks to reproduce the figures in Koks et al. (in review). 
+It also provides Jupyter Notebooks to reproduce the figures in [https://www.nature.com/articles/s41467-019-10442-3](Koks et al. (2019)). 
 
 ## Data requirements
 * All transport data is based on OpenStreetMap (OSM), which can be freely downloaded. The planet file used in Koks et al. (in review) is downloaded at July 17, 2018. However, to run the code, the latest planet.osm.pbf file can be used.
