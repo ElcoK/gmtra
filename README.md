@@ -26,7 +26,6 @@ figures, for example:
     "figure_path": "/home/<user>/projects/GMTRA/figures"
 }
 ```
-
 ## Python requirements
 
 Recommended option is to use a [miniconda](https://conda.io/miniconda.html)
@@ -43,7 +42,24 @@ conda env create -f environment.yml
 activate GMTRA
 
 ```
+## How to cite:
 
+If you use the **GMTRA** in your work, please cite the corresponding paper:
+
+Koks, E. E., Rozenberg, J., Zorn, C., Tariverdi, M., Vousdoukas, M., Fraser, S. A., Hall, J.W., & Hallegatte, S. (2019). A global multi-hazard risk analysis of road and railway infrastructure assets. Nature Communications, 10(1), 2677.
+
+
+        @article{koks2019_gmtra,
+          title={A global multi-hazard risk analysis of road and railway infrastructure assets},
+          author={Koks, EE and Rozenberg, J and Zorn, C and Tariverdi, M and Vousdoukas, M and 
+          Fraser, SA and Hall, JW and Hallegatte, S},
+          journal={Nature Communications},
+          volume={10},
+          number={1},
+          pages={2677},
+          year={2019},
+          publisher={Nature Publishing Group}
+        }
 
 ### License
 Copyright (C) 2019 Elco Koks. All versions released under the [GNU Affero General Public License v3.0 license](LICENSE).
